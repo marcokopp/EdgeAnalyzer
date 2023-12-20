@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image, ImageTk
 from sklearn.metrics import mean_absolute_error
 import os
-# test
+# test2
 
 def prepare_data(path):
     x = []
