@@ -5,8 +5,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image, ImageTk
 from sklearn.metrics import mean_absolute_error
+from circle_fit import taubinSVD
 import os
-# test2
+
 
 def prepare_data(path):
     x = []
@@ -79,7 +80,7 @@ def clear_selection():
     canvas2.draw()
     info_label.configure(text="Selection clear! Select file or folder to start... ")
 
-def calculate(export):
+def fit_calculation(export):
     try:
         file_list
         # Clear Treeviw and Plot
@@ -93,7 +94,77 @@ def calculate(export):
             axs1.clear() # see every plot seperatly
             axs2.clear()
             x_raw, y_raw = prepare_data(file)
-            x_min_limit, x_max_limit, x_shift, y_shift, x_tip, y_tip, x_lin_left, y_lin_left, x_lin_right, y_lin_right, x_relief_left, y_relief_left,x_relief_right, y_relief_right, x_left, y_left, x_right, y_right, center, radius = circle_calculation(cut_value,no_flank,x_raw,y_raw)
+            # determin transition points
+            x_min_limit, x_max_limit, x_shift, y_shift, x_tip, y_tip, x_lin_left, y_lin_left, x_lin_right, y_lin_right, x_relief_left, y_relief_left,x_relief_right, y_relief_right, x_left, y_left, x_right, y_right = edge_detection(cut_value, no_flank, x_raw, y_raw)
+            # fit calculaiton
+            x_edge = x_shift[(x_shift > x_relief_left) & (x_shift < x_relief_right)]
+            y_edge = y_shift[(x_shift > x_relief_left) & (x_shift < x_relief_right)]
+            radius, center = circle_fit(x_edge, y_edge)
+            # print file list in treeview and append results
+            file_tree.insert('', 'end', values=(os.path.basename(file), round(radius*1000)))
+            result_file.append(os.path.basename(file))
+            result_radius.append(round(radius*1000))
+            # Plotting
+            # Plot scaled data on the first plot window
+            axs1.set_xlabel('raw x in mm')
+            axs1.set_ylabel('raw y in mm')
+            axs1.set_title('raw profile')
+            axs1.plot(x_raw, y_raw)
+            axs1.vlines(x_min_limit, ymax=max(y_raw), ymin=min(y_raw), linestyles='dashed')
+            axs1.vlines(x_max_limit, ymax=max(y_raw), ymin=min(y_raw), linestyles='dashed')
+            canvas1.draw()  # Redraw canvas with new plot
+
+            # Plot scaled data on the second plot window
+            axs2.set_xlabel('clean x in mm')
+            axs2.set_ylabel('clean y in mm')
+            axs2.set_title('clean edge')
+            axs2.plot(x_shift, y_shift)
+            axs2.plot(x_lin_left, y_lin_left, 'k--', x_lin_right, y_lin_right, 'k--')
+            axs2.plot(x_edge, y_edge, 'kx')
+            axs2.plot(x_left, y_left, 'ko')
+            axs2.plot(x_right, y_right, 'ko')
+            circle_finale = plt.Circle((center[0], center[1]), radius, color='b', fill=False)
+            axs2.plot(center[0], center[1], 'k+')
+            axs2.add_patch(circle_finale)
+            axs2.text(center[0], center[1], f'radius: {round(radius, 2)}', ha='right', va='bottom', color='red')
+            canvas2.draw()  # Redraw canvas with new plot
+            root.update()
+
+            # file export ?
+            if export == 1:
+                save_path = result_exporter(file_list, result_file, result_radius)
+                # update Info
+                info_label.configure(text="Results are exported to" + str(save_path))
+            else:
+                pass
+    except NameError:
+        info_label.configure(text = "No file or folder selected")
+
+def circle_fit(x_edge, y_edge):
+    xy_edge = np.stack((x_edge, y_edge), axis=1)
+    list_of_pairs = [tuple(row) for row in xy_edge]
+    xc, yc, r, sigma = taubinSVD(list_of_pairs)
+    center = (xc, yc)
+    return r, center
+
+def three_point_calculation(export):
+    try:
+        file_list
+        # Clear Treeviw and Plot
+        file_tree.delete(*file_tree.get_children())
+        cut_value = float(entry_cut_value.get())               # Get the integer value from the Entry field
+        no_flank = cut_value - float(entry_linear_area.get())  # get linear model of profile flanks
+        # initialize result list
+        result_file = []
+        result_radius = []
+        for file in file_list:
+            axs1.clear() # see every plot seperatly
+            axs2.clear()
+            x_raw, y_raw = prepare_data(file)
+            # determin transition points
+            x_min_limit, x_max_limit, x_shift, y_shift, x_tip, y_tip, x_lin_left, y_lin_left, x_lin_right, y_lin_right, x_relief_left, y_relief_left,x_relief_right, y_relief_right, x_left, y_left, x_right, y_right = edge_detection(cut_value, no_flank, x_raw, y_raw)
+            # 3-Point calculaiton
+            center, radius = define_circle((x_relief_left, y_relief_left), (x_relief_right, y_relief_right),(x_tip, y_tip))
             # print file list in treeview and append results
             file_tree.insert('', 'end', values=(os.path.basename(file), round(radius*1000)))
             result_file.append(os.path.basename(file))
@@ -165,7 +236,7 @@ def define_circle(p1, p2, p3):
     radius = np.sqrt((cx - p1[0])**2 + (cy - p1[1])**2)
     return ((cx, cy), radius)
 
-def circle_calculation(cut_value,no_flank,x_raw,y_raw):
+def edge_detection(cut_value,no_flank,x_raw,y_raw):
     max_value_y = max(y_raw)
     middle_value_x = x_raw[(y_raw == max_value_y)]
     x_min_limit = min(middle_value_x) - cut_value
@@ -225,15 +296,13 @@ def circle_calculation(cut_value,no_flank,x_raw,y_raw):
     x_relief_right = x_cut_right[relief_right]
     y_relief_right = y_cut_right[relief_right]
 
-    center, radius = define_circle((x_relief_left, y_relief_left), (x_relief_right, y_relief_right), (x_tip, y_tip))
-
-    return x_min_limit, x_max_limit, x_shift, y_shift, x_tip, y_tip, x_lin_left, y_lin_left, x_lin_right, y_lin_right, x_relief_left, y_relief_left,x_relief_right, y_relief_right, x_left, y_left, x_right, y_right, center, radius
+    return x_min_limit, x_max_limit, x_shift, y_shift, x_tip, y_tip, x_lin_left, y_lin_left, x_lin_right, y_lin_right, x_relief_left, y_relief_left,x_relief_right, y_relief_right, x_left, y_left, x_right, y_right
 
 
 # GUI Setup
 root = tk.Tk()
 root.geometry("1410x500")
-color = "red"
+color = "snow3"
 root.configure(bg=color)
 
 ### Control Panel ###
@@ -278,13 +347,13 @@ checkbox = tk.Checkbutton(frame_file_handle, text="Export", variable=export_chec
 checkbox.pack(side = 'left',padx=0, pady=0)
 ### Elements of Parameter Frame
 # Entry cut value
-label_cut_value = tk.Label(frame_parameter_cut, text="Cut value [mm]:  ",bg = 'cadetblue3')
+label_cut_value = tk.Label(frame_parameter_cut, text="Cut value [mm]:  ",bg = 'snow4')
 label_cut_value.pack(side = 'left',padx=5, pady=5)
 entry_cut_value = tk.Entry(frame_parameter_cut, width=11)
 entry_cut_value.insert(0, "2.0")  # Insert "2" at index 0 initally
 entry_cut_value.pack(side = 'left',padx=5, pady=5)
 # Entry linear area
-label_linear_area = tk.Label(frame_parameter_linear, text="Linear area [mm]:",bg = 'cadetblue3')
+label_linear_area = tk.Label(frame_parameter_linear, text="Linear area [mm]:",bg = 'snow4')
 label_linear_area.pack(side = 'left',padx=5, pady=5)
 entry_linear_area = tk.Entry(frame_parameter_linear, width=11)
 entry_linear_area.insert(0, "0.8")  # Insert "2" at index 0 initally
@@ -296,8 +365,10 @@ small_image = ImageTk.PhotoImage(small_image)
 small_image_label = tk.Label(frame_parameter_img, image=small_image)
 small_image_label.pack(side = 'left',padx=5, pady=5)
 # Calculate
-calc_button_single = tk.Button(frame_control, text="Calculate", command=lambda: calculate(export_checker.get()))
-calc_button_single.pack(side = 'top',pady=5)
+calc_button_single = tk.Button(frame_control, text="Calculate (3P)", command=lambda: three_point_calculation(export_checker.get()))
+calc_button_single.pack(side = 'left',pady=5)
+calc_button_single = tk.Button(frame_control, text="Calculate (fit)", command=lambda: fit_calculation(export_checker.get()))
+calc_button_single.pack(side = 'left',pady=5)
 
 
 ### Plot Panel ###
@@ -324,7 +395,7 @@ frame_print.pack(side='top', fill = 'x')
 print_label = tk.Label(frame_print, text = 'Info:',bg = color)
 print_label.pack(side='left',padx = 5, pady = 0)
 
-frame_info = tk.Frame(root, bg = 'cadetblue2')
+frame_info = tk.Frame(root, bg = 'snow3')
 frame_info.pack(side='top',fill = 'x')
 info_label = ttk.Label(frame_info, text = 'Select file or folder to start...')
 info_label.pack(side='left',padx = 5, pady = 0)
