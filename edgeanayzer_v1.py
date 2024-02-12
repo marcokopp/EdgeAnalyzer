@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image, ImageTk
 from sklearn.metrics import mean_absolute_error
+from scipy.signal import savgol_filter
 from circle_fit import taubinSVD
 import os
 
@@ -22,8 +23,8 @@ def prepare_data(path):
             y.append(float(items[1]))
     x_raw = np.asarray(x)
     y_raw = np.asarray(y)
-
-    return x_raw,y_raw
+    y_smooth = savgol_filter(y_raw, 3, 2)
+    return x_raw, y_smooth
 
 def select_path(button):
     global file_list
@@ -83,7 +84,7 @@ def clear_selection():
 def fit_calculation(export):
     try:
         file_list
-        # Clear Treeviw and Plot
+        # Clear Treeview and Plot
         file_tree.delete(*file_tree.get_children())
         cut_value = float(entry_cut_value.get())               # Get the integer value from the Entry field
         no_flank = cut_value - float(entry_linear_area.get())  # get linear model of profile flanks
@@ -95,15 +96,73 @@ def fit_calculation(export):
             axs2.clear()
             x_raw, y_raw = prepare_data(file)
             # determin transition points
-            x_min_limit, x_max_limit, x_shift, y_shift, x_tip, y_tip, x_lin_left, y_lin_left, x_lin_right, y_lin_right, x_relief_left, y_relief_left,x_relief_right, y_relief_right, x_left, y_left, x_right, y_right = edge_detection(cut_value, no_flank, x_raw, y_raw)
+            x_min_limit, x_max_limit, x_shift, y_shift, x_tip, y_tip, x_lin_left, y_lin_left, x_lin_right, y_lin_right, x_relief_left, y_relief_left, x_relief_right, y_relief_right, x_left, y_left, x_right, y_right, tp_error = edge_detection(cut_value, no_flank, x_raw, y_raw)
             # fit calculaiton
             x_edge = x_shift[(x_shift > x_relief_left) & (x_shift < x_relief_right)]
             y_edge = y_shift[(x_shift > x_relief_left) & (x_shift < x_relief_right)]
-            radius, center = circle_fit(x_edge, y_edge)
+
+            # Error catching
+            # check if transition points exist
+            if tp_error == 1:
+                err_msg = 'Transition points not found'
+                print(err_msg)
+                radius = np.nan
+                center = np.nan
+            else:
+                # transition points must be on the correct side of the tip point
+                if x_relief_left < x_tip and x_relief_right > x_tip:
+                    # ratio of distances between transition and tip point less than factor X --> force symmetry
+                    if max((x_tip - x_relief_left), (x_relief_right - x_tip)) / min((x_tip - x_relief_left),(x_relief_right - x_tip)) < 2:
+                        print('Transition points good')
+                        radius, center = circle_fit(x_edge, y_edge)
+                    else:
+                        # distances too different
+                        err_msg = 'Transition points uneven'
+                        print(err_msg)
+                        radius = np.nan
+                        center = np.nan
+                else:
+                    # transition point on wrong side
+                    err_msg = 'Transition points out of boundary'
+                    print(err_msg)
+                    radius = np.nan
+                    center = np.nan
+
+                # center of circle must be under the tip
+                if np.isnan(radius):
+                    pass
+                else:
+                    if y_tip > center[1]:
+                        if x_relief_left < center[0] and x_relief_right > center[0]:
+                            pass
+                        else:
+                            err_msg = 'Center point out of boundary'
+                            print(err_msg)
+                            radius = np.nan
+                            center = np.nan
+                    else:
+                        err_msg = 'Center point out of boundary'
+                        print(err_msg)
+                        radius = np.nan
+                        center = np.nan
+            # check if radius makes sense regarding the distance of transition points
+            # large radii occur is edge is very flat
+            if radius / (x_relief_right - x_relief_left) > 10:
+                err_msg = 'Radius too large'
+                print(err_msg)
+                radius = np.nan
+                center = np.nan
+
             # print file list in treeview and append results
-            file_tree.insert('', 'end', values=(os.path.basename(file), round(radius*1000)))
-            result_file.append(os.path.basename(file))
-            result_radius.append(round(radius*1000))
+            if np.isnan(radius):
+                file_tree.insert('', 'end', values=(os.path.basename(file),'nan'))
+                result_file.append(os.path.basename(file))
+                result_radius.append('nan')
+            else:
+                file_tree.insert('', 'end', values=(os.path.basename(file), round(radius*1000)))
+                result_file.append(os.path.basename(file))
+                result_radius.append(round(radius*1000))
+
             # Plotting
             # Plot scaled data on the first plot window
             axs1.set_xlabel('raw x in mm')
@@ -123,10 +182,16 @@ def fit_calculation(export):
             axs2.plot(x_edge, y_edge, 'kx')
             axs2.plot(x_left, y_left, 'ko')
             axs2.plot(x_right, y_right, 'ko')
-            circle_finale = plt.Circle((center[0], center[1]), radius, color='b', fill=False)
-            axs2.plot(center[0], center[1], 'k+')
-            axs2.add_patch(circle_finale)
-            axs2.text(center[0], center[1], f'radius: {round(radius, 2)}', ha='right', va='bottom', color='red')
+            axs2.plot(x_tip, y_tip, 'rx', markersize=10)
+            axs2.plot(x_relief_left, y_relief_left, 'bx', markersize=10)
+            axs2.plot(x_relief_right, y_relief_right, 'bx', markersize=10)
+            if np.isnan(radius):
+                axs2.text(0.5, 0, f'no calculation: {err_msg} ', ha='left', va='bottom', color='red')
+            else:
+                circle_finale = plt.Circle((center[0], center[1]), radius, color='b', fill=False)
+                axs2.plot(center[0], center[1], 'k+')
+                axs2.add_patch(circle_finale)
+                axs2.text(center[0], center[1], f'radius: {round(radius, 2)}', ha='right', va='bottom', color='red')
             canvas2.draw()  # Redraw canvas with new plot
             root.update()
 
@@ -276,7 +341,8 @@ def edge_detection(cut_value,no_flank,x_raw,y_raw):
     err_right = mean_absolute_error(y_cut_right, y_lin_right)
 
     # run up left flank and check if real flank reliefs from flank approximation more than mean error
-    for i in range(len(y_cut_left)):
+    relief_left = len(y_cut_left) - 1  # initialize with highest possible value --> will cause error catch if no transition point is found
+    for i in range(len(y_lin_left)):
         if y_cut_left[i] < (y_lin_left[i] - err_left):
             y_cut_temp = y_cut_left[i:len(y_cut_left)]
             y_flank_temp = y_lin_left[i:len(y_lin_left)]
@@ -286,17 +352,24 @@ def edge_detection(cut_value,no_flank,x_raw,y_raw):
             else:
                 relief_left = i
                 break
-    # run down right flank and check if real flank reliefs from flank approximation more than mean error
-    for i in range(len(y_lin_right)):
-        if y_cut_right[i] > y_lin_right[i] - (err_right):
-            relief_right = i - 1
-            break
+    # if no left transition point is found, skip search of right transition point and set it so zero
+    # --> will cause error catch if no transition point is found
+    transition_point_error = 0
+    if relief_left == len(y_cut_left) - 1:
+        relief_right = 0
+        transition_point_error = 1
+    else:
+        # run down right flank and check if real flank reliefs from flank approximation more than mean error
+        for i in range(len(y_lin_right)):
+            if y_cut_right[i] > y_lin_right[i] - (err_right):
+                relief_right = i - 1
+                break
     x_relief_left = x_cut_left[relief_left]
     y_relief_left = y_cut_left[relief_left]
     x_relief_right = x_cut_right[relief_right]
     y_relief_right = y_cut_right[relief_right]
 
-    return x_min_limit, x_max_limit, x_shift, y_shift, x_tip, y_tip, x_lin_left, y_lin_left, x_lin_right, y_lin_right, x_relief_left, y_relief_left,x_relief_right, y_relief_right, x_left, y_left, x_right, y_right
+    return x_min_limit, x_max_limit, x_shift, y_shift, x_tip, y_tip, x_lin_left, y_lin_left, x_lin_right, y_lin_right, x_relief_left, y_relief_left,x_relief_right, y_relief_right, x_left, y_left, x_right, y_right, transition_point_error
 
 
 # GUI Setup
@@ -356,7 +429,7 @@ entry_cut_value.pack(side = 'left',padx=5, pady=5)
 label_linear_area = tk.Label(frame_parameter_linear, text="Linear area [mm]:",bg = 'snow4')
 label_linear_area.pack(side = 'left',padx=5, pady=5)
 entry_linear_area = tk.Entry(frame_parameter_linear, width=11)
-entry_linear_area.insert(0, "0.8")  # Insert "2" at index 0 initally
+entry_linear_area.insert(0, "1.2")  # Insert "2" at index 0 initally
 entry_linear_area.pack(side = 'left',padx=5, pady=5)
 # Image
 small_image = Image.open("../cutvalue_lineararea_grafic.PNG")
