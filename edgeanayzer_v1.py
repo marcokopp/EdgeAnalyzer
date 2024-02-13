@@ -195,13 +195,17 @@ def fit_calculation(export):
             canvas2.draw()  # Redraw canvas with new plot
             root.update()
 
-            # file export ?
-            if export == 1:
-                save_path = result_exporter(file_list, result_file, result_radius)
-                # update Info
-                info_label.configure(text="Results are exported to" + str(save_path))
-            else:
-                pass
+        # file export ?
+        if export == 1:
+            not_nan_indexes = [index for index, element in enumerate(result_radius) if element != 'nan']
+            filtered_file_list = [file_list[i] for i in not_nan_indexes]
+            filtered_result_file = [result_file[i] for i in not_nan_indexes]
+            filtered_result_radius = [result_radius[i] for i in not_nan_indexes]
+            save_path = result_exporter(filtered_file_list, filtered_result_file, filtered_result_radius)
+            # update Info
+            info_label.configure(text="Results are exported to" + str(save_path))
+        else:
+            pass
     except NameError:
         info_label.configure(text = "No file or folder selected")
 
