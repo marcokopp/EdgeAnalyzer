@@ -50,15 +50,15 @@ def select_path(button):
         file_tree.insert('', 'end', values=(os.path.basename(file), 'k.A.'))
         x_raw, y_raw = prepare_data(file)
         # plot raw profiles
-        axs1.set_xlabel('raw x in mm')
-        axs1.set_ylabel('raw y in mm')
+        axs1.set_xlabel('x [mm]')
+        axs1.set_ylabel('y [mm]')
         axs1.set_title('raw profile')
         axs1.plot(x_raw, y_raw)
         canvas1.draw()
         axs2.clear()
-        axs2.set_xlabel('clean x in mm')
-        axs2.set_ylabel('clean y in mm')
-        axs2.set_title('clean edge')
+        axs2.set_xlabel('x [mm]')
+        axs2.set_ylabel('y [mm]')
+        axs2.set_title('cleaned edge')
         canvas2.draw()
     # update Info
     info = os.path.dirname(file_list[0])
@@ -71,15 +71,15 @@ def clear_selection():
     file_tree.delete(*file_tree.get_children())
     axs1.clear()
     axs2.clear()
-    axs1.set_xlabel('raw x in mm')
-    axs1.set_ylabel('raw y in mm')
+    axs1.set_xlabel('x [mm]')
+    axs1.set_ylabel('y [mm]')
     axs1.set_title('raw profile')
-    axs2.set_xlabel('clean x in mm')
-    axs2.set_ylabel('clean y in mm')
-    axs2.set_title('clean edge')
+    axs2.set_xlabel('x [mm]')
+    axs2.set_ylabel('y [mm]')
+    axs2.set_title('cleaned edge')
     canvas1.draw()
     canvas2.draw()
-    info_label.configure(text="Selection clear! Select file or folder to start... ")
+    info_label.configure(text="Selection cleared! Select file or folder to start... ")
 
 def fit_calculation(export):
     try:
@@ -96,7 +96,9 @@ def fit_calculation(export):
             axs2.clear()
             x_raw, y_raw = prepare_data(file)
             # determin transition points
-            x_min_limit, x_max_limit, x_shift, y_shift, x_tip, y_tip, x_lin_left, y_lin_left, x_lin_right, y_lin_right, x_relief_left, y_relief_left, x_relief_right, y_relief_right, x_left, y_left, x_right, y_right, tp_error = edge_detection(cut_value, no_flank, x_raw, y_raw)
+            x_min_limit, x_max_limit, x_shift, y_shift, x_tip, y_tip, x_lin_left, y_lin_left, x_lin_right, y_lin_right, \
+                x_relief_left, y_relief_left, x_relief_right, y_relief_right, x_left, y_left, x_right, y_right, \
+                    tp_error = edge_detection(cut_value, no_flank, x_raw, y_raw)
             # fit calculaiton
             x_edge = x_shift[(x_shift > x_relief_left) & (x_shift < x_relief_right)]
             y_edge = y_shift[(x_shift > x_relief_left) & (x_shift < x_relief_right)]
@@ -165,8 +167,8 @@ def fit_calculation(export):
 
             # Plotting
             # Plot scaled data on the first plot window
-            axs1.set_xlabel('raw x in mm')
-            axs1.set_ylabel('raw y in mm')
+            axs1.set_xlabel('x [mm]')
+            axs1.set_ylabel('y [mm]')
             axs1.set_title('raw profile')
             axs1.plot(x_raw, y_raw)
             axs1.vlines(x_min_limit, ymax=max(y_raw), ymin=min(y_raw), linestyles='dashed')
@@ -174,9 +176,9 @@ def fit_calculation(export):
             canvas1.draw()  # Redraw canvas with new plot
 
             # Plot scaled data on the second plot window
-            axs2.set_xlabel('clean x in mm')
-            axs2.set_ylabel('clean y in mm')
-            axs2.set_title('clean edge')
+            axs2.set_xlabel('x [mm]')
+            axs2.set_ylabel('y [mm]')
+            axs2.set_title('cleaned edge')
             axs2.plot(x_shift, y_shift)
             axs2.plot(x_lin_left, y_lin_left, 'k--', x_lin_right, y_lin_right, 'k--')
             axs2.plot(x_edge, y_edge, 'kx')
@@ -231,7 +233,9 @@ def three_point_calculation(export):
             axs2.clear()
             x_raw, y_raw = prepare_data(file)
             # determin transition points
-            x_min_limit, x_max_limit, x_shift, y_shift, x_tip, y_tip, x_lin_left, y_lin_left, x_lin_right, y_lin_right, x_relief_left, y_relief_left,x_relief_right, y_relief_right, x_left, y_left, x_right, y_right = edge_detection(cut_value, no_flank, x_raw, y_raw)
+            x_min_limit, x_max_limit, x_shift, y_shift, x_tip, y_tip, x_lin_left, y_lin_left, x_lin_right, y_lin_right, \
+                x_relief_left, y_relief_left, x_relief_right, y_relief_right, x_left, y_left, x_right, \
+                    y_right = edge_detection(cut_value, no_flank, x_raw, y_raw)
             # 3-Point calculaiton
             center, radius = define_circle((x_relief_left, y_relief_left), (x_relief_right, y_relief_right),(x_tip, y_tip))
             # print file list in treeview and append results
@@ -240,8 +244,8 @@ def three_point_calculation(export):
             result_radius.append(round(radius*1000))
             # Plotting
             # Plot scaled data on the first plot window
-            axs1.set_xlabel('raw x in mm')
-            axs1.set_ylabel('raw y in mm')
+            axs1.set_xlabel('x [mm]')
+            axs1.set_ylabel('y [mm]')
             axs1.set_title('raw profile')
             axs1.plot(x_raw, y_raw)
             axs1.vlines(x_min_limit, ymax=max(y_raw), ymin=min(y_raw), linestyles='dashed')
@@ -249,9 +253,9 @@ def three_point_calculation(export):
             canvas1.draw()  # Redraw canvas with new plot
 
             # Plot scaled data on the second plot window
-            axs2.set_xlabel('clean x in mm')
-            axs2.set_ylabel('clean y in mm')
-            axs2.set_title('clean edge')
+            axs2.set_xlabel('x [mm]')
+            axs2.set_ylabel('y [mm]')
+            axs2.set_title('cleaned edge')
             axs2.plot(x_shift, y_shift, x_tip, y_tip, 'kx')
             axs2.plot(x_lin_left, y_lin_left, 'k--', x_lin_right, y_lin_right, 'k--')
             axs2.plot(x_relief_left, y_relief_left, 'kx', x_relief_right, y_relief_right, 'kx')
@@ -373,7 +377,8 @@ def edge_detection(cut_value,no_flank,x_raw,y_raw):
     x_relief_right = x_cut_right[relief_right]
     y_relief_right = y_cut_right[relief_right]
 
-    return x_min_limit, x_max_limit, x_shift, y_shift, x_tip, y_tip, x_lin_left, y_lin_left, x_lin_right, y_lin_right, x_relief_left, y_relief_left,x_relief_right, y_relief_right, x_left, y_left, x_right, y_right, transition_point_error
+    return x_min_limit, x_max_limit, x_shift, y_shift, x_tip, y_tip, x_lin_left, y_lin_left, x_lin_right, y_lin_right, \
+        x_relief_left, y_relief_left, x_relief_right, y_relief_right, x_left, y_left, x_right, y_right, transition_point_error
 
 
 # GUI Setup
@@ -384,30 +389,30 @@ root.configure(bg=color)
 
 ### Control Panel ###
 frame_control = tk.Frame(root, bg = color)
-frame_control.pack(side='left', fill = 'y')
+frame_control.pack(side='left', fill='y')
 ## Selection Frame
 frame_selection = tk.Frame(frame_control, bg = color)
-frame_selection.pack(side='top',fill = 'x')
+frame_selection.pack(side='top',fill='x')
 ## File Shower Frame
 frame_file_shower = tk.Frame(frame_control, bg=color)
-frame_file_shower.pack(side='top', fill = 'x')
+frame_file_shower.pack(side='top', fill='x')
 ## File Handle Frame
 frame_file_handle = tk.Frame(frame_control, bg=color)
-frame_file_handle.pack(side='top', fill = 'x')
+frame_file_handle.pack(side='top', fill='x')
 ## Parameter Frame
 frame_parameter_cut = tk.Frame(frame_control, bg=color)
-frame_parameter_cut.pack(side='top', fill = 'x')
+frame_parameter_cut.pack(side='top', fill='x')
 frame_parameter_linear = tk.Frame(frame_control, bg=color)
-frame_parameter_linear.pack(side='top', fill = 'x')
+frame_parameter_linear.pack(side='top', fill='x')
 frame_parameter_img = tk.Frame(frame_control, bg=color)
-frame_parameter_img.pack(side='top', fill = 'x')
+frame_parameter_img.pack(side='top', fill='x')
 ### Elements of selection Frame
 select_file_button = tk.Button(frame_selection, text="Select File", command=lambda: select_path("file"))
-select_file_button.pack(side='left', padx=5 ,pady=5)
-select_file_label = tk.Label(frame_selection, text="or", bg = color)
-select_file_label.pack(side='left', padx=5 ,pady=5)
+select_file_button.pack(side='left', padx=5, pady=5)
+select_file_label = tk.Label(frame_selection, text="or", bg=color)
+select_file_label.pack(side='left', padx=5, pady=5)
 select_folder_button = tk.Button(frame_selection, text="Select Folder", command=lambda: select_path("folder"))
-select_folder_button.pack(side='left', padx=5 ,pady=5)
+select_folder_button.pack(side='left', padx=5, pady=5)
 ### Elements of File Shower Frame
 file_tree = ttk.Treeview(frame_file_shower, columns=('Name', 'Radius [µm]'), show='headings')
 file_tree.heading('Name', text='Name')
@@ -418,63 +423,65 @@ file_tree['height'] = 9
 file_tree.pack(side='left', padx=5, pady=5)  # Adjust dimensions here
 ### Elements of File Handle Frame
 clear_button = tk.Button(frame_file_handle, text="Clear Selection", command=clear_selection)
-clear_button.pack(side = 'left',padx=5, pady=5)
+clear_button.pack(side='left', padx=5, pady=5)
 export_checker = tk.IntVar()
-checkbox = tk.Checkbutton(frame_file_handle, text="Export", variable=export_checker, bg = color)
-checkbox.pack(side = 'left',padx=0, pady=0)
+checkbox = tk.Checkbutton(frame_file_handle, text="Export", variable=export_checker, bg=color)
+checkbox.pack(side='left', padx=0, pady=0)
 ### Elements of Parameter Frame
 # Entry cut value
-label_cut_value = tk.Label(frame_parameter_cut, text="Cut value [mm]:  ",bg = 'snow4')
-label_cut_value.pack(side = 'left',padx=5, pady=5)
+label_cut_value = tk.Label(frame_parameter_cut, text="Cut value [mm]:  ", bg='snow4')
+label_cut_value.pack(side='left', padx=5, pady=5)
 entry_cut_value = tk.Entry(frame_parameter_cut, width=11)
 entry_cut_value.insert(0, "2.0")  # Insert "2" at index 0 initally
-entry_cut_value.pack(side = 'left',padx=5, pady=5)
+entry_cut_value.pack(side='left', padx=5, pady=5)
 # Entry linear area
-label_linear_area = tk.Label(frame_parameter_linear, text="Linear area [mm]:",bg = 'snow4')
-label_linear_area.pack(side = 'left',padx=5, pady=5)
+label_linear_area = tk.Label(frame_parameter_linear, text="Linear area [mm]:", bg='snow4')
+label_linear_area.pack(side='left', padx=5, pady=5)
 entry_linear_area = tk.Entry(frame_parameter_linear, width=11)
 entry_linear_area.insert(0, "1.2")  # Insert "2" at index 0 initally
-entry_linear_area.pack(side = 'left',padx=5, pady=5)
+entry_linear_area.pack(side='left', padx=5, pady=5)
 # Image
-small_image = Image.open("../cutvalue_lineararea_grafic.PNG")
+small_image = Image.open("cutvalue_lineararea_graphic.PNG")
 small_image = small_image.resize((172, 95))
 small_image = ImageTk.PhotoImage(small_image)
 small_image_label = tk.Label(frame_parameter_img, image=small_image)
-small_image_label.pack(side = 'left',padx=5, pady=5)
+small_image_label.pack(side='left', padx=5, pady=5)
 # Calculate
-calc_button_single = tk.Button(frame_control, text="Calculate (3P)", command=lambda: three_point_calculation(export_checker.get()))
-calc_button_single.pack(side = 'left',pady=5)
+# calc_button_single = tk.Button(frame_control, text="Calculate (3P)", command=lambda: three_point_calculation(export_checker.get()))
+# calc_button_single.pack(side = 'left', pady=5)
 calc_button_single = tk.Button(frame_control, text="Calculate (fit)", command=lambda: fit_calculation(export_checker.get()))
-calc_button_single.pack(side = 'left',pady=5)
+calc_button_single.pack(side='left', pady=5)
 
 
 ### Plot Panel ###
-frame_plot_all = tk.Frame(root, bg = color)
-frame_plot_all.pack(side='top', fill = 'both')
+frame_plot_all = tk.Frame(root, bg=color)
+frame_plot_all.pack(side='top', fill='both')
 # Figure 1
 fig1, axs1 = plt.subplots(figsize=(6, 4.5))
-axs1.set_xlabel('raw x in mm')
-axs1.set_ylabel('raw y in mm')
+axs1.set_xlabel('x [mm]')
+axs1.set_ylabel('y [mm]')
 axs1.set_title('raw profile')
 canvas1 = FigureCanvasTkAgg(fig1, master=frame_plot_all)
-canvas1.get_tk_widget().pack(side='left',padx = 5, pady = 5)
+canvas1.get_tk_widget().pack(side='left', padx=5, pady=5)
+axs1.axis('equal')
 # Figure 2
 fig2, axs2 = plt.subplots(figsize=(6, 4.5))
-axs2.set_xlabel('clean x in mm')
-axs2.set_ylabel('clean y in mm')
-axs2.set_title('clean profile')
+axs2.set_xlabel('x [mm]')
+axs2.set_ylabel('y [mm]')
+axs2.set_title('cleaned profile')
 canvas2 = FigureCanvasTkAgg(fig2, master=frame_plot_all)
-canvas2.get_tk_widget().pack(side='left',padx = 5, pady = 5)
+canvas2.get_tk_widget().pack(side='left', padx=5, pady=5)
+axs2.axis('equal')
 
 ### Print Panel ###
-frame_print = tk.Frame(root, bg = color)
-frame_print.pack(side='top', fill = 'x')
-print_label = tk.Label(frame_print, text = 'Info:',bg = color)
-print_label.pack(side='left',padx = 5, pady = 0)
+frame_print = tk.Frame(root, bg=color)
+frame_print.pack(side='top', fill='x')
+print_label = tk.Label(frame_print, text='Info:', bg=color)
+print_label.pack(side='left', padx=5, pady=0)
 
-frame_info = tk.Frame(root, bg = 'snow3')
-frame_info.pack(side='top',fill = 'x')
-info_label = ttk.Label(frame_info, text = 'Select file or folder to start...')
-info_label.pack(side='left',padx = 5, pady = 0)
+frame_info = tk.Frame(root, bg='snow3')
+frame_info.pack(side='top', fill='x')
+info_label = ttk.Label(frame_info, text='Select file or folder to start...')
+info_label.pack(side='left', padx=5, pady=0)
 
 root.mainloop()
