@@ -81,6 +81,12 @@ def clear_selection():
     canvas2.draw()
     info_label.configure(text="Selection cleared! Select file or folder to start... ")
 
+# Calculate shape factor ("K" or "Kappa") to quantify edge asymmetry
+def kappa_factor(x_relief_left, y_relief_left, x_lin_right, y_lin_right, x_relief_right, y_relief_right):    
+    S_left = np.sqrt(pow(x_relief_left-x_lin_right[0], 2) + pow(y_relief_left-y_lin_right[0], 2))
+    S_right = np.sqrt(pow(x_relief_right-x_lin_right[0], 2) + pow(y_relief_right-y_lin_right[0], 2))
+    return S_left / S_right
+
 def fit_calculation(export):
     try:
         file_list
@@ -165,6 +171,12 @@ def fit_calculation(export):
                 result_file.append(os.path.basename(file))
                 result_radius.append(round(radius*1000))
 
+            # print(x_lin_left)
+            # print(y_lin_right)
+            # print(x_lin_left)
+            # print(y_lin_right)
+            Kappa = kappa_factor(x_relief_left, y_relief_left, x_lin_right, y_lin_right, x_relief_right, y_relief_right)
+
             # Plotting
             # Plot scaled data on the first plot window
             axs1.set_xlabel('x [mm]')
@@ -181,9 +193,9 @@ def fit_calculation(export):
             axs2.set_title('cleaned edge')
             axs2.plot(x_shift, y_shift)
             axs2.plot(x_lin_left, y_lin_left, 'k--', x_lin_right, y_lin_right, 'k--')
-            axs2.plot(x_edge, y_edge, 'kx')
-            axs2.plot(x_left, y_left, 'ko')
-            axs2.plot(x_right, y_right, 'ko')
+            axs2.plot(x_edge, y_edge, 'r')
+            axs2.plot(x_left, y_left, 'c')
+            axs2.plot(x_right, y_right, 'c')
             axs2.plot(x_tip, y_tip, 'rx', markersize=10)
             axs2.plot(x_relief_left, y_relief_left, 'bx', markersize=10)
             axs2.plot(x_relief_right, y_relief_right, 'bx', markersize=10)
@@ -193,7 +205,8 @@ def fit_calculation(export):
                 circle_finale = plt.Circle((center[0], center[1]), radius, color='b', fill=False)
                 axs2.plot(center[0], center[1], 'k+')
                 axs2.add_patch(circle_finale)
-                axs2.text(center[0], center[1], f'radius: {round(radius, 2)}', ha='right', va='bottom', color='red')
+                # axs2.text(center[0], center[1], f'radius: {round(radius, 2)}', ha='right', va='top', color='red')
+                axs2.text(0, y_tip, 'r\u03b2 = {:.0f} \u03bcm\nK = {:.3f}'.format(radius * 1000, Kappa), ha='left', va='bottom', color='red')
             canvas2.draw()  # Redraw canvas with new plot
             root.update()
 
@@ -205,11 +218,11 @@ def fit_calculation(export):
             filtered_result_radius = [result_radius[i] for i in not_nan_indexes]
             save_path = result_exporter(filtered_file_list, filtered_result_file, filtered_result_radius)
             # update Info
-            info_label.configure(text="Results are exported to" + str(save_path))
+            info_label.configure(text="Results are exported to " + str(save_path))
         else:
             pass
     except NameError:
-        info_label.configure(text = "No file or folder selected")
+        info_label.configure(text="No file or folder selected")
 
 def circle_fit(x_edge, y_edge):
     xy_edge = np.stack((x_edge, y_edge), axis=1)
@@ -242,6 +255,9 @@ def three_point_calculation(export):
             file_tree.insert('', 'end', values=(os.path.basename(file), round(radius*1000)))
             result_file.append(os.path.basename(file))
             result_radius.append(round(radius*1000))
+
+            K = kappa_factor(x_relief_left, y_relief_left, x_tip, y_tip, x_relief_right, y_relief_right)
+
             # Plotting
             # Plot scaled data on the first plot window
             axs1.set_xlabel('x [mm]')
@@ -264,7 +280,7 @@ def three_point_calculation(export):
             circle_finale = plt.Circle((center[0], center[1]), radius, color='b', fill=False)
             axs2.plot(center[0], center[1], 'k+')
             axs2.add_patch(circle_finale)
-            axs2.text(center[0], center[1], f'radius: {round(radius, 2)}', ha='right', va='bottom', color='red')
+            axs2.text(center[0], center[1], 'radius: {:.3f}\nK: {:.3f}'.format(radius, K), ha='right', va='bottom', color='red')
             canvas2.draw()  # Redraw canvas with new plot
             root.update()
 
@@ -309,7 +325,7 @@ def define_circle(p1, p2, p3):
     radius = np.sqrt((cx - p1[0])**2 + (cy - p1[1])**2)
     return ((cx, cy), radius)
 
-def edge_detection(cut_value,no_flank,x_raw,y_raw):
+def edge_detection(cut_value, no_flank, x_raw, y_raw):
     max_value_y = max(y_raw)
     middle_value_x = x_raw[(y_raw == max_value_y)]
     x_min_limit = min(middle_value_x) - cut_value
@@ -392,7 +408,7 @@ frame_control = tk.Frame(root, bg = color)
 frame_control.pack(side='left', fill='y')
 ## Selection Frame
 frame_selection = tk.Frame(frame_control, bg = color)
-frame_selection.pack(side='top',fill='x')
+frame_selection.pack(side='top', fill='x')
 ## File Shower Frame
 frame_file_shower = tk.Frame(frame_control, bg=color)
 frame_file_shower.pack(side='top', fill='x')
