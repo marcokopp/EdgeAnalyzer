@@ -1,2 +1,2 @@
 # EdgeAnalyzer
-Determin the radius of an edge
+Determine the radius and the k-factor (symmetry) of an edge
