@@ -305,7 +305,7 @@ def result_exporter(file_list, result_file, result_radius, result_kappa):
         # Writing data from both lists into the file
         for file_name, radius, kappa in zip(result_file, result_radius, result_kappa):
             if radius != 'nan':  # is valid edge rounding
-                file.write("{}\t{:.0f}\t{:.3f}\n".format(file_name, radius * 1000, kappa))
+                file.write("{}\t{:.0f}\t{}\n".format(file_name, radius * 1000, str(round(kappa, 3)).replace('.',',')))
             else:  # could not measure edge rounding
                 file.write(f"{file_name}\t0\t1\n")  # assume sharp, symmetrical edge
     return upper_folder
