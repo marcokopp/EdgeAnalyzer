@@ -300,7 +300,7 @@ def result_exporter(file_list, result_file, result_radius, result_kappa):
     save_path = os.path.dirname(file_list[0])
     upper_folder = os.path.dirname(save_path)
     with open(os.path.join(upper_folder, 'Kantenmessung.txt'),'w') as file:
-        file.write("File\tRadius [µm]\nK-Faktor\n")  # Writing the header
+        file.write("File\tRadius [µm]\tK-Faktor\n")  # Writing the header
 
         # Writing data from both lists into the file
         for file_name, radius, kappa in zip(result_file, result_radius, result_kappa):
