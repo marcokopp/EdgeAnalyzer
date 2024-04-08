@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog, ttk
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image, ImageTk
@@ -9,7 +9,7 @@ from scipy.signal import savgol_filter
 from circle_fit import taubinSVD
 import os
 from sys import exit
-
+import mplcursors
 
 def prepare_data(path):
     x = []
@@ -55,6 +55,7 @@ def select_path(button):
         axs1.set_ylabel('y [mm]')
         axs1.set_title('raw profile')
         axs1.plot(x_raw, y_raw)
+
         canvas1.draw()
         axs2.clear()
         axs2.set_xlabel('x [mm]')
@@ -404,7 +405,7 @@ def edge_detection(cut_value, no_flank, x_raw, y_raw):
 
 # GUI Setup
 root = tk.Tk()
-root.geometry("1410x500")
+root.geometry("1410x530")
 color = "snow3"
 root.configure(bg=color)
 
@@ -470,39 +471,56 @@ small_image_label.pack(side='left', padx=5, pady=5)
 # Calculate
 # calc_button_single = tk.Button(frame_control, text="Calculate (3P)", command=lambda: three_point_calculation(export_checker.get()))
 # calc_button_single.pack(side = 'left', pady=5)
-calc_button_single = tk.Button(frame_control, text="Calculate (fit)", command=lambda: fit_calculation(export_checker.get()))
-calc_button_single.pack(side='left', pady=5)
+calc_frame = tk.Frame(frame_control, bg = color)
+calc_frame.pack(side='top', fill='x')
+calc_button_single = tk.Button(calc_frame, text="Calculate (fit)", command=lambda: fit_calculation(export_checker.get()))
+calc_button_single.pack(side='left', padx=5, pady=5)
 # Quit application
-calc_button_single = tk.Button(frame_control, text="Quit", command=lambda: exit())
-calc_button_single.pack(side='right', pady=5)
+quit_frame = tk.Frame(frame_control, bg = color)
+quit_frame.pack(side='top', fill='x')
+quit_button_single = tk.Button(quit_frame, text="Quit", command=lambda: exit())
+quit_button_single.pack(side='left', padx=5, pady=5)
 
 ### Plot Panel ###
 frame_plot_all = tk.Frame(root, bg=color)
 frame_plot_all.pack(side='top', fill='both')
 # Figure 1
+frame_left = tk.Frame(root, bg=color)
+frame_left.pack(side='left', fill='both', pady=5)
 fig1, axs1 = plt.subplots(figsize=(6, 4.5))
 axs1.set_xlabel('x [mm]')
 axs1.set_ylabel('y [mm]')
 axs1.set_title('raw profile')
-canvas1 = FigureCanvasTkAgg(fig1, master=frame_plot_all)
-canvas1.get_tk_widget().pack(side='left', padx=5, pady=5)
+canvas1 = FigureCanvasTkAgg(fig1, master=frame_left)
+canvas1.get_tk_widget().pack(side='top', padx=5, pady=0)
 axs1.axis('equal')
+# Add toolbar for Figure 1
+toolbar1 = NavigationToolbar2Tk(canvas1, frame_left)
+toolbar1.update()
+toolbar1.pack(side='top', padx=5, pady=0)
+
 # Figure 2
+frame_right= tk.Frame(root, bg=color)
+frame_right.pack(side='left', fill='both', pady=5)
 fig2, axs2 = plt.subplots(figsize=(6, 4.5))
 axs2.set_xlabel('x [mm]')
 axs2.set_ylabel('y [mm]')
 axs2.set_title('cleaned profile')
-canvas2 = FigureCanvasTkAgg(fig2, master=frame_plot_all)
-canvas2.get_tk_widget().pack(side='left', padx=5, pady=5)
+canvas2 = FigureCanvasTkAgg(fig2, master=frame_right)
+canvas2.get_tk_widget().pack(side='top', padx=5, pady=0)
 axs2.axis('equal')
+# Add toolbar for Figure 2
+toolbar2 = NavigationToolbar2Tk(canvas2, frame_right)
+toolbar2.update()
+toolbar2.pack(side='top', padx=5, pady=0)
 
 ### Print Panel ###
-frame_print = tk.Frame(root, bg=color)
+frame_print = tk.Frame(frame_plot_all, bg=color)
 frame_print.pack(side='top', fill='x')
 print_label = tk.Label(frame_print, text='Info:', bg=color)
 print_label.pack(side='left', padx=5, pady=0)
 
-frame_info = tk.Frame(root, bg='snow3')
+frame_info = tk.Frame(frame_plot_all, bg='snow3')
 frame_info.pack(side='top', fill='x')
 info_label = ttk.Label(frame_info, text='Select file or folder to start...')
 info_label.pack(side='left', padx=5, pady=0)
