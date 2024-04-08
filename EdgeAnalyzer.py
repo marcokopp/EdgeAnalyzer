@@ -9,7 +9,7 @@ from scipy.signal import savgol_filter
 from circle_fit import taubinSVD
 import os
 from sys import exit
-import mplcursors
+
 
 def prepare_data(path):
     x = []
