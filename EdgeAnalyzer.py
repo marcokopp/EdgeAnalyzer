@@ -8,6 +8,7 @@ from sklearn.metrics import mean_absolute_error
 from scipy.signal import savgol_filter
 from circle_fit import taubinSVD
 import os
+import datetime
 from sys import exit
 
 
@@ -48,7 +49,7 @@ def select_path(button):
 
     for file in file_list:
         # print file list in treeview
-        file_tree.insert('', 'end', values=(os.path.basename(file), 'k.A.'))
+        file_tree.insert('', 'end', values=(os.path.basename(file), 'k.A.', 'k.A.'))
         x_raw, y_raw = prepare_data(file)
         # plot raw profiles
         axs1.set_xlabel('x [mm]')
@@ -164,18 +165,20 @@ def fit_calculation(export):
                 radius = np.nan
                 center = np.nan
 
+            Kappa = kappa_factor(x_relief_left, y_relief_left, x_lin_right, y_lin_right, x_relief_right, y_relief_right)
+            result_kappa.append(Kappa)
+
             # print file list in treeview and append results
             if np.isnan(radius):
-                file_tree.insert('', 'end', values=(os.path.basename(file),'nan'))
+                file_tree.insert('', 'end', values=(os.path.basename(file),'nan','nan'))
                 result_file.append(os.path.basename(file))
                 result_radius.append('nan')
             else:
-                file_tree.insert('', 'end', values=(os.path.basename(file), round(radius*1000)))
+                file_tree.insert('', 'end', values=(os.path.basename(file), round(radius*1000), round(Kappa,2)))
                 result_file.append(os.path.basename(file))
                 result_radius.append(radius)
 
-            Kappa = kappa_factor(x_relief_left, y_relief_left, x_lin_right, y_lin_right, x_relief_right, y_relief_right)
-            result_kappa.append(Kappa)
+
 
             # Plotting
             # Plot scaled data on the first plot window
@@ -301,14 +304,15 @@ def result_exporter(file_list, result_file, result_radius, result_kappa):
     save_path = os.path.dirname(file_list[0])
     upper_folder = os.path.dirname(save_path)
     with open(os.path.join(upper_folder, 'Kantenmessung.txt'),'w') as file:
-        file.write("File\tRadius [µm]\tK-Faktor\n")  # Writing the header
+        file.write("File\tDate-Time\tRadius [µm]\tK-Faktor\n")  # Writing the header
 
         # Writing data from both lists into the file
         for file_name, radius, kappa in zip(result_file, result_radius, result_kappa):
+            modification_time = datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(save_path, file_name)))
             if radius != 'nan':  # is valid edge rounding
-                file.write("{}\t{:.0f}\t{}\n".format(file_name, radius * 1000, str(round(kappa, 3)).replace('.',',')))
+                file.write("{}\t{}\t{:.0f}\t{}\n".format(file_name,modification_time, radius * 1000, str(round(kappa, 3)).replace('.',',')))
             else:  # could not measure edge rounding
-                file.write(f"{file_name}\t0\t1\n")  # assume sharp, symmetrical edge
+                file.write(f"{file_name}\t{modification_time}\t0\t1\n")  # assume sharp, symmetrical edge
     return upper_folder
 
 def define_circle(p1, p2, p3):
@@ -436,11 +440,13 @@ select_file_label.pack(side='left', padx=5, pady=5)
 select_folder_button = tk.Button(frame_selection, text="Select Folder", command=lambda: select_path("folder"))
 select_folder_button.pack(side='left', padx=5, pady=5)
 ### Elements of File Shower Frame
-file_tree = ttk.Treeview(frame_file_shower, columns=('Name', 'Radius [µm]'), show='headings')
+file_tree = ttk.Treeview(frame_file_shower, columns=('Name', 'Radius [µm]', "K-Faktor"), show='headings')
 file_tree.heading('Name', text='Name')
 file_tree.heading('Radius [µm]', text='Radius [µm]')
-file_tree.column('Name', width=88)
-file_tree.column('Radius [µm]', width=88)
+file_tree.heading('K-Faktor', text='K-Faktor')
+file_tree.column('Name', width=50)
+file_tree.column('Radius [µm]', width=70)
+file_tree.column('K-Faktor', width=70)
 file_tree['height'] = 9
 file_tree.pack(side='left', padx=5, pady=5)  # Adjust dimensions here
 ### Elements of File Handle Frame
