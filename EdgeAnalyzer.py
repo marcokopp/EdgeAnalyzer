@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog, ttk
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image, ImageTk
@@ -8,6 +8,7 @@ from sklearn.metrics import mean_absolute_error
 from scipy.signal import savgol_filter
 from circle_fit import taubinSVD
 import os
+import datetime
 from sys import exit
 
 
@@ -48,13 +49,14 @@ def select_path(button):
 
     for file in file_list:
         # print file list in treeview
-        file_tree.insert('', 'end', values=(os.path.basename(file), 'k.A.'))
+        file_tree.insert('', 'end', values=(os.path.basename(file), 'k.A.', 'k.A.'))
         x_raw, y_raw = prepare_data(file)
         # plot raw profiles
         axs1.set_xlabel('x [mm]')
         axs1.set_ylabel('y [mm]')
         axs1.set_title('raw profile')
         axs1.plot(x_raw, y_raw)
+
         canvas1.draw()
         axs2.clear()
         axs2.set_xlabel('x [mm]')
@@ -163,18 +165,20 @@ def fit_calculation(export):
                 radius = np.nan
                 center = np.nan
 
+            Kappa = kappa_factor(x_relief_left, y_relief_left, x_lin_right, y_lin_right, x_relief_right, y_relief_right)
+            result_kappa.append(Kappa)
+
             # print file list in treeview and append results
             if np.isnan(radius):
-                file_tree.insert('', 'end', values=(os.path.basename(file),'nan'))
+                file_tree.insert('', 'end', values=(os.path.basename(file),'nan','nan'))
                 result_file.append(os.path.basename(file))
                 result_radius.append('nan')
             else:
-                file_tree.insert('', 'end', values=(os.path.basename(file), round(radius*1000)))
+                file_tree.insert('', 'end', values=(os.path.basename(file), round(radius*1000), round(Kappa,2)))
                 result_file.append(os.path.basename(file))
                 result_radius.append(radius)
 
-            Kappa = kappa_factor(x_relief_left, y_relief_left, x_lin_right, y_lin_right, x_relief_right, y_relief_right)
-            result_kappa.append(Kappa)
+
 
             # Plotting
             # Plot scaled data on the first plot window
@@ -300,14 +304,15 @@ def result_exporter(file_list, result_file, result_radius, result_kappa):
     save_path = os.path.dirname(file_list[0])
     upper_folder = os.path.dirname(save_path)
     with open(os.path.join(upper_folder, 'Kantenmessung.txt'),'w') as file:
-        file.write("File\tRadius [µm]\tK-Faktor\n")  # Writing the header
+        file.write("File\tDate-Time\tRadius [µm]\tK-Faktor\n")  # Writing the header
 
         # Writing data from both lists into the file
         for file_name, radius, kappa in zip(result_file, result_radius, result_kappa):
+            modification_time = datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(save_path, file_name)))
             if radius != 'nan':  # is valid edge rounding
-                file.write("{}\t{:.0f}\t{:.3f}\n".format(file_name, radius * 1000, kappa))
+                file.write("{}\t{}\t{:.0f}\t{}\n".format(file_name,modification_time, radius * 1000, str(round(kappa, 3)).replace('.',',')))
             else:  # could not measure edge rounding
-                file.write(f"{file_name}\t0\t1\n")  # assume sharp, symmetrical edge
+                file.write(f"{file_name}\t{modification_time}\t0\t1\n")  # assume sharp, symmetrical edge
     return upper_folder
 
 def define_circle(p1, p2, p3):
@@ -404,7 +409,7 @@ def edge_detection(cut_value, no_flank, x_raw, y_raw):
 
 # GUI Setup
 root = tk.Tk()
-root.geometry("1410x500")
+root.geometry("1410x530")
 color = "snow3"
 root.configure(bg=color)
 
@@ -435,11 +440,13 @@ select_file_label.pack(side='left', padx=5, pady=5)
 select_folder_button = tk.Button(frame_selection, text="Select Folder", command=lambda: select_path("folder"))
 select_folder_button.pack(side='left', padx=5, pady=5)
 ### Elements of File Shower Frame
-file_tree = ttk.Treeview(frame_file_shower, columns=('Name', 'Radius [µm]'), show='headings')
+file_tree = ttk.Treeview(frame_file_shower, columns=('Name', 'Radius [µm]', "K-Faktor"), show='headings')
 file_tree.heading('Name', text='Name')
 file_tree.heading('Radius [µm]', text='Radius [µm]')
-file_tree.column('Name', width=88)
-file_tree.column('Radius [µm]', width=88)
+file_tree.heading('K-Faktor', text='K-Faktor')
+file_tree.column('Name', width=50)
+file_tree.column('Radius [µm]', width=70)
+file_tree.column('K-Faktor', width=70)
 file_tree['height'] = 9
 file_tree.pack(side='left', padx=5, pady=5)  # Adjust dimensions here
 ### Elements of File Handle Frame
@@ -470,39 +477,56 @@ small_image_label.pack(side='left', padx=5, pady=5)
 # Calculate
 # calc_button_single = tk.Button(frame_control, text="Calculate (3P)", command=lambda: three_point_calculation(export_checker.get()))
 # calc_button_single.pack(side = 'left', pady=5)
-calc_button_single = tk.Button(frame_control, text="Calculate (fit)", command=lambda: fit_calculation(export_checker.get()))
-calc_button_single.pack(side='left', pady=5)
+calc_frame = tk.Frame(frame_control, bg = color)
+calc_frame.pack(side='top', fill='x')
+calc_button_single = tk.Button(calc_frame, text="Calculate (fit)", command=lambda: fit_calculation(export_checker.get()))
+calc_button_single.pack(side='left', padx=5, pady=5)
 # Quit application
-calc_button_single = tk.Button(frame_control, text="Quit", command=lambda: exit())
-calc_button_single.pack(side='right', pady=5)
+quit_frame = tk.Frame(frame_control, bg = color)
+quit_frame.pack(side='top', fill='x')
+quit_button_single = tk.Button(quit_frame, text="Quit", command=lambda: exit())
+quit_button_single.pack(side='left', padx=5, pady=5)
 
 ### Plot Panel ###
 frame_plot_all = tk.Frame(root, bg=color)
 frame_plot_all.pack(side='top', fill='both')
 # Figure 1
+frame_left = tk.Frame(root, bg=color)
+frame_left.pack(side='left', fill='both', pady=5)
 fig1, axs1 = plt.subplots(figsize=(6, 4.5))
 axs1.set_xlabel('x [mm]')
 axs1.set_ylabel('y [mm]')
 axs1.set_title('raw profile')
-canvas1 = FigureCanvasTkAgg(fig1, master=frame_plot_all)
-canvas1.get_tk_widget().pack(side='left', padx=5, pady=5)
+canvas1 = FigureCanvasTkAgg(fig1, master=frame_left)
+canvas1.get_tk_widget().pack(side='top', padx=5, pady=0)
 axs1.axis('equal')
+# Add toolbar for Figure 1
+toolbar1 = NavigationToolbar2Tk(canvas1, frame_left)
+toolbar1.update()
+toolbar1.pack(side='top', padx=5, pady=0)
+
 # Figure 2
+frame_right= tk.Frame(root, bg=color)
+frame_right.pack(side='left', fill='both', pady=5)
 fig2, axs2 = plt.subplots(figsize=(6, 4.5))
 axs2.set_xlabel('x [mm]')
 axs2.set_ylabel('y [mm]')
 axs2.set_title('cleaned profile')
-canvas2 = FigureCanvasTkAgg(fig2, master=frame_plot_all)
-canvas2.get_tk_widget().pack(side='left', padx=5, pady=5)
+canvas2 = FigureCanvasTkAgg(fig2, master=frame_right)
+canvas2.get_tk_widget().pack(side='top', padx=5, pady=0)
 axs2.axis('equal')
+# Add toolbar for Figure 2
+toolbar2 = NavigationToolbar2Tk(canvas2, frame_right)
+toolbar2.update()
+toolbar2.pack(side='top', padx=5, pady=0)
 
 ### Print Panel ###
-frame_print = tk.Frame(root, bg=color)
+frame_print = tk.Frame(frame_plot_all, bg=color)
 frame_print.pack(side='top', fill='x')
 print_label = tk.Label(frame_print, text='Info:', bg=color)
 print_label.pack(side='left', padx=5, pady=0)
 
-frame_info = tk.Frame(root, bg='snow3')
+frame_info = tk.Frame(frame_plot_all, bg='snow3')
 frame_info.pack(side='top', fill='x')
 info_label = ttk.Label(frame_info, text='Select file or folder to start...')
 info_label.pack(side='left', padx=5, pady=0)
