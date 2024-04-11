@@ -10,6 +10,8 @@ from circle_fit import taubinSVD
 import os
 import datetime
 from sys import exit
+from skimage.measure import EllipseModel  # pip install scikit-image
+from matplotlib.patches import Ellipse
 
 
 def prepare_data(path):
@@ -100,6 +102,7 @@ def fit_calculation(export):
         # initialize result list
         result_file = []
         result_radius = []
+        result_radii_ell = []
         result_kappa = []
         for file in file_list:
             axs1.clear() # see every plot seperatly
@@ -109,7 +112,7 @@ def fit_calculation(export):
             x_min_limit, x_max_limit, x_shift, y_shift, x_tip, y_tip, x_lin_left, y_lin_left, x_lin_right, y_lin_right, \
                 x_relief_left, y_relief_left, x_relief_right, y_relief_right, x_left, y_left, x_right, y_right, \
                     tp_error = edge_detection(cut_value, no_flank, x_raw, y_raw)
-            # fit calculaiton
+            # fit calculation
             x_edge = x_shift[(x_shift > x_relief_left) & (x_shift < x_relief_right)]
             y_edge = y_shift[(x_shift > x_relief_left) & (x_shift < x_relief_right)]
 
@@ -127,6 +130,7 @@ def fit_calculation(export):
                     if max((x_tip - x_relief_left), (x_relief_right - x_tip)) / min((x_tip - x_relief_left),(x_relief_right - x_tip)) < 2:
                         print('Transition points good')
                         radius, center = circle_fit(x_edge, y_edge)
+                        center_ell, radii_ell, theta_ell = ellipsis_fit(x_edge, y_edge)
                     else:
                         # distances too different
                         err_msg = 'Transition points uneven'
@@ -173,12 +177,12 @@ def fit_calculation(export):
                 file_tree.insert('', 'end', values=(os.path.basename(file),'nan','nan'))
                 result_file.append(os.path.basename(file))
                 result_radius.append('nan')
+                result_radii_ell.append(('nan','nan'))
             else:
                 file_tree.insert('', 'end', values=(os.path.basename(file), round(radius*1000), round(Kappa,2)))
                 result_file.append(os.path.basename(file))
                 result_radius.append(radius)
-
-
+                result_radii_ell.append(radii_ell)
 
             # Plotting
             # Plot scaled data on the first plot window
@@ -206,8 +210,11 @@ def fit_calculation(export):
                 axs2.text(0.5, 0, f'no calculation: {err_msg} ', ha='left', va='bottom', color='red')
             else:
                 circle_finale = plt.Circle((center[0], center[1]), radius, color='b', fill=False)
+                ellipsis_finale = PlotEllipsis(center_ell, radii_ell, theta_ell)
+
                 axs2.plot(center[0], center[1], 'k+')
                 axs2.add_patch(circle_finale)
+                axs2.add_patch(ellipsis_finale)
                 # axs2.text(center[0], center[1], f'radius: {round(radius, 2)}', ha='right', va='top', color='red')
                 axs2.text(0, y_tip, 'r\u03b2 = {:.0f} \u03bcm\nK = {:.3f}'.format(radius * 1000, Kappa), ha='left', va='bottom', color='red')
             canvas2.draw()  # Redraw canvas with new plot
@@ -220,7 +227,7 @@ def fit_calculation(export):
             # filtered_result_file = [result_file[i] for i in not_nan_indexes]
             # filtered_result_radius = [result_radius[i] for i in not_nan_indexes]
             # save_path = result_exporter(filtered_file_list, filtered_result_file, filtered_result_radius)
-            save_path = result_exporter(file_list, result_file, result_radius, result_kappa)
+            save_path = result_exporter(file_list, result_file, result_radius, result_radii_ell, result_kappa)
             # update Info
             info_label.configure(text="Results are exported to " + str(save_path))
         else:
@@ -228,12 +235,27 @@ def fit_calculation(export):
     except NameError:
         info_label.configure(text="No file or folder selected")
 
+def PlotEllipsis(center, radii, theta):
+    return Ellipse(center, radii[0]*2, radii[1]*2, angle=theta, alpha=0.5)
+
 def circle_fit(x_edge, y_edge):
     xy_edge = np.stack((x_edge, y_edge), axis=1)
     list_of_pairs = [tuple(row) for row in xy_edge]
     xc, yc, r, sigma = taubinSVD(list_of_pairs)
     center = (xc, yc)
     return r, center
+
+def ellipsis_fit(x_edge, y_edge):
+    xy_edge = np.stack((x_edge, y_edge), axis=1)
+    # list_of_pairs = [tuple(row) for row in xy_edge]
+    # xc, yc, r, sigma = taubinSVD(list_of_pairs)
+
+    ell = EllipseModel()
+    ell.estimate(xy_edge)
+    xc, yc, a, b, theta = ell.params
+    center = (xc, yc)
+    radii = (a,b)
+    return center, radii, theta
 
 # def three_point_calculation(export):
 #     try:
@@ -300,17 +322,18 @@ def circle_fit(x_edge, y_edge):
 #     except NameError:
 #         info_label.configure(text = "No file or folder selected")
 
-def result_exporter(file_list, result_file, result_radius, result_kappa):
+def result_exporter(file_list, result_file, result_radius, result_radii_ell, result_kappa):
     save_path = os.path.dirname(file_list[0])
     upper_folder = os.path.dirname(save_path)
     with open(os.path.join(upper_folder, 'Kantenmessung.txt'),'w') as file:
-        file.write("File\tDate-Time\tRadius [µm]\tK-Faktor\n")  # Writing the header
+        file.write("File\tDate-Time\tRadius [µm]\trA\trB\tK-Faktor\n")  # Writing the header
 
         # Writing data from both lists into the file
-        for file_name, radius, kappa in zip(result_file, result_radius, result_kappa):
+        for file_name, radius, radii_ell, kappa in zip(result_file, result_radius, result_radii_ell, result_kappa):
             modification_time = datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(save_path, file_name)))
             if radius != 'nan':  # is valid edge rounding
-                file.write("{}\t{}\t{:.0f}\t{}\n".format(file_name,modification_time, radius * 1000, str(round(kappa, 3)).replace('.',',')))
+                file.write("{}\t{}\t{:.0f}\t{:.0f}\t{:.0f}\t{}\n".format(file_name,modification_time, \
+                    radius*1000, radii_ell[0]*1000, radii_ell[1]*1000, str(round(kappa, 3)).replace('.',',')))
             else:  # could not measure edge rounding
                 file.write(f"{file_name}\t{modification_time}\t0\t1\n")  # assume sharp, symmetrical edge
     return upper_folder
@@ -356,12 +379,12 @@ def edge_detection(cut_value, no_flank, x_raw, y_raw):
     x_right = x_shift[np.where(x_shift > (x_tip+no_flank))]
     y_right = y_shift[np.where(x_shift > (x_tip+no_flank))]
 
-    # linear modell of flanks
+    # linear model of flanks
     m_left, b_left = np.polyfit(x_left, y_left, 1)
     m_right, b_right = np.polyfit(x_right, y_right, 1)
-    x_intersept = (b_right - b_left)/(m_left - m_right)
-    x_lin_left = x_shift[np.where(x_shift < x_intersept)]
-    x_lin_right = x_shift[np.where(x_shift > x_intersept)]
+    x_intersect = (b_right - b_left)/(m_left - m_right)
+    x_lin_left = x_shift[np.where(x_shift < x_intersect)]
+    x_lin_right = x_shift[np.where(x_shift > x_intersect)]
     y_lin_left = m_left * x_lin_left + b_left
     y_lin_right = m_right * x_lin_right + b_right
 
@@ -440,12 +463,12 @@ select_file_label.pack(side='left', padx=5, pady=5)
 select_folder_button = tk.Button(frame_selection, text="Select Folder", command=lambda: select_path("folder"))
 select_folder_button.pack(side='left', padx=5, pady=5)
 ### Elements of File Shower Frame
-file_tree = ttk.Treeview(frame_file_shower, columns=('Name', 'Radius [µm]', "K-Faktor"), show='headings')
+file_tree = ttk.Treeview(frame_file_shower, columns=('Name', 'Radius', 'K-Faktor'), show='headings')
 file_tree.heading('Name', text='Name')
-file_tree.heading('Radius [µm]', text='Radius [µm]')
+file_tree.heading('Radius', text='Radius')
 file_tree.heading('K-Faktor', text='K-Faktor')
 file_tree.column('Name', width=50)
-file_tree.column('Radius [µm]', width=70)
+file_tree.column('Radius', width=70)
 file_tree.column('K-Faktor', width=70)
 file_tree['height'] = 9
 file_tree.pack(side='left', padx=5, pady=5)  # Adjust dimensions here
