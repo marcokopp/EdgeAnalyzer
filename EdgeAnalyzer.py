@@ -63,16 +63,44 @@ def select_path(button):
         axs2.clear()
         axs2.set_xlabel('x [mm]')
         axs2.set_ylabel('y [mm]')
-        axs2.set_title('cleaned edge')
+        axs2.set_title('clean edge')
         canvas2.draw()
     # update Info
     info = os.path.dirname(file_list[0])
     info_label.configure(text="Selected folder: " + str(info))
 
 def clear_selection():
-    global file_list
-    file_list = None
-    del file_list
+    global file_list; file_list = None; del file_list
+    global result_radius; result_radius = None; del result_radius
+    global result_kappa; result_kappa = None; del result_kappa
+    global center_list; center_list = None; del center_list
+    global center_ell_list; center_ell_list = None; del center_ell_list
+    global radii_ell_list; radii_ell_list = None; del radii_ell_list
+    global theta_ell_list; theta_ell_list = None; del theta_ell_list
+    global x_raw_list; x_raw_list = None; del x_raw_list
+    global y_raw_list; y_raw_list = None; del y_raw_list
+    global x_min_limit_list; x_min_limit_list = None; del x_min_limit_list
+    global x_max_limit_list; x_max_limit_list = None; del x_max_limit_list
+    global x_shift_list; x_shift_list = None; del x_shift_list
+    global y_shift_list; y_shift_list = None; del y_shift_list
+    global x_lin_left_list; x_lin_left_list = None; del x_lin_left_list
+    global y_lin_left_list; y_lin_left_list = None; del y_lin_left_list
+    global x_lin_right_list; x_lin_right_list = None; del x_lin_right_list
+    global y_lin_right_list; y_lin_right_list = None; del y_lin_right_list
+    global x_edge_list; x_edge_list = None; del x_edge_list
+    global y_edge_list; y_edge_list = None; del y_edge_list
+    global x_left_list; x_left_list = None; del x_left_list
+    global y_left_list; y_left_list = None; del y_left_list
+    global x_right_list; x_right_list = None; del x_right_list
+    global y_right_list; y_right_list = None; del y_right_list
+    global x_tip_list; x_tip_list = None; del x_tip_list
+    global y_tip_list; y_tip_list = None; del y_tip_list
+    global x_relief_left_list; x_relief_left_list = None; del x_relief_left_list
+    global y_relief_left_list; y_relief_left_list = None; del y_relief_left_list
+    global x_relief_right_list; x_relief_right_list = None; del x_relief_right_list
+    global y_relief_right_list; y_relief_right_list = None; del y_relief_right_list
+    global err_msg_list; err_msg_list = None; del err_msg_list
+
     file_tree.delete(*file_tree.get_children())
     axs1.clear()
     axs2.clear()
@@ -81,10 +109,11 @@ def clear_selection():
     axs1.set_title('raw profile')
     axs2.set_xlabel('x [mm]')
     axs2.set_ylabel('y [mm]')
-    axs2.set_title('cleaned edge')
+    axs2.set_title('clean edge')
     canvas1.draw()
     canvas2.draw()
     info_label.configure(text="Selection cleared! Select file or folder to start... ")
+    browse_label.configure(text=default_text)
 
 # Calculate shape factor ("K" or "Kappa") to quantify edge asymmetry
 def kappa_factor(x_relief_left, y_relief_left, x_lin_right, y_lin_right, x_relief_right, y_relief_right):    
@@ -94,17 +123,48 @@ def kappa_factor(x_relief_left, y_relief_left, x_lin_right, y_lin_right, x_relie
 
 def fit_calculation(export):
     try:
-        # file_list
         # Clear Treeview and Plot
         file_tree.delete(*file_tree.get_children())
         cut_value = float(entry_cut_value.get())               # Get the integer value from the Entry field
         no_flank = cut_value - float(entry_linear_area.get())  # get linear model of profile flanks
         # initialize result list
         result_file = []
-        result_radius = []
+        global result_radius; result_radius = []
         result_radii_ell = []
-        result_kappa = []
+        global result_kappa; result_kappa = []
+        # initialize result list for plotting (all must be gobal for replotting when broswing through subplots)
+        global center_list; center_list = []
+        global center_ell_list; center_ell_list = []
+        global radii_ell_list; radii_ell_list = []
+        global theta_ell_list; theta_ell_list = []
+        global x_raw_list; x_raw_list = []
+        global y_raw_list; y_raw_list = []
+        global x_min_limit_list; x_min_limit_list = []
+        global x_max_limit_list; x_max_limit_list = []
+        global x_shift_list; x_shift_list = []
+        global y_shift_list; y_shift_list = []
+        global x_lin_left_list; x_lin_left_list = []
+        global y_lin_left_list; y_lin_left_list = []
+        global x_lin_right_list; x_lin_right_list = []
+        global y_lin_right_list; y_lin_right_list = []
+        global x_edge_list; x_edge_list = []
+        global y_edge_list; y_edge_list = []
+        global x_left_list; x_left_list = []
+        global y_left_list; y_left_list = []
+        global x_right_list; x_right_list = []
+        global y_right_list; y_right_list = []
+        global x_tip_list; x_tip_list = []
+        global y_tip_list; y_tip_list = []
+        global x_relief_left_list; x_relief_left_list = []
+        global y_relief_left_list; y_relief_left_list = []
+        global x_relief_right_list; x_relief_right_list = []
+        global y_relief_right_list; y_relief_right_list = []
+        global err_msg_list; err_msg_list = []
+
         for file in file_list:
+            # update Browse-lable
+            browse_label.configure(text=os.path.basename(file))
+
             axs1.clear() # see every plot seperatly
             axs2.clear()
             x_raw, y_raw = prepare_data(file)
@@ -118,6 +178,8 @@ def fit_calculation(export):
 
             # Error catching
             # check if transition points exist
+            err_msg = 'no error'
+
             if tp_error == 1:
                 err_msg = 'Transition points not found'
                 print(err_msg)
@@ -184,6 +246,35 @@ def fit_calculation(export):
                 result_radius.append(radius)
                 result_radii_ell.append(radii_ell)
 
+            # fill all lists for replotting
+            center_list.append(center)
+            center_ell_list.append(center_ell)
+            radii_ell_list.append(radii_ell)
+            theta_ell_list.append(theta_ell)
+            x_raw_list.append(x_raw)
+            y_raw_list.append(y_raw)
+            x_min_limit_list.append(x_min_limit)
+            x_max_limit_list.append(x_max_limit)
+            x_shift_list.append(x_shift)
+            y_shift_list.append(y_shift)
+            x_lin_left_list.append(x_lin_left)
+            y_lin_left_list.append(y_lin_left)
+            x_lin_right_list.append(x_lin_right)
+            y_lin_right_list.append(y_lin_right)
+            x_edge_list.append(x_edge)
+            y_edge_list.append(y_edge)
+            x_left_list.append(x_left)
+            y_left_list.append(y_left)
+            x_right_list.append(x_right)
+            y_right_list.append(y_right)
+            x_tip_list.append(x_tip)
+            y_tip_list.append(y_tip)
+            x_relief_left_list.append(x_relief_left)
+            y_relief_left_list.append(y_relief_left)
+            x_relief_right_list.append(x_relief_right)
+            y_relief_right_list.append(y_relief_right)
+            err_msg_list.append(err_msg)
+
             # Plotting
             # Plot scaled data on the first plot window
             axs1.set_xlabel('x [mm]')
@@ -197,7 +288,7 @@ def fit_calculation(export):
             # Plot scaled data on the second plot window
             axs2.set_xlabel('x [mm]')
             axs2.set_ylabel('y [mm]')
-            axs2.set_title('cleaned edge')
+            axs2.set_title('clean edge')
             axs2.plot(x_shift, y_shift)
             axs2.plot(x_lin_left, y_lin_left, 'k--', x_lin_right, y_lin_right, 'k--')
             axs2.plot(x_edge, y_edge, 'r')
@@ -211,7 +302,6 @@ def fit_calculation(export):
             else:
                 circle_finale = plt.Circle((center[0], center[1]), radius, color='b', fill=False)
                 ellipsis_finale = PlotEllipsis(center_ell, radii_ell, theta_ell)
-
                 axs2.plot(center[0], center[1], 'k+')
                 axs2.add_patch(circle_finale)
                 axs2.add_patch(ellipsis_finale)
@@ -220,7 +310,6 @@ def fit_calculation(export):
             canvas2.draw()  # Redraw canvas with new plot
             root.update()
 
-        # file export ?
         if export == 1:
             # not_nan_indexes = [index for index, element in enumerate(result_radius) if element != 'nan']
             # filtered_file_list = [file_list[i] for i in not_nan_indexes]
@@ -429,6 +518,117 @@ def edge_detection(cut_value, no_flank, x_raw, y_raw):
     return x_min_limit, x_max_limit, x_shift, y_shift, x_tip, y_tip, x_lin_left, y_lin_left, x_lin_right, y_lin_right, \
         x_relief_left, y_relief_left, x_relief_right, y_relief_right, x_left, y_left, x_right, y_right, transition_point_error
 
+def browse_up(current_text):
+    current_index = 0
+    for i in range(len(file_list)):
+        if current_text == os.path.basename(file_list[i]):
+            current_index = i
+            break
+    next_index = current_index + 1
+    if next_index == len(file_list):
+        next_index = 0
+        browse_label.configure(text=os.path.basename(file_list[next_index]))
+    else:
+        browse_label.configure(text=os.path.basename(file_list[next_index]))
+
+
+    # Plotting
+    axs1.clear()  # see every plot seperatly
+    axs2.clear()
+    axs1.set_xlabel('x [mm]')
+    axs1.set_ylabel('y [mm]')
+    axs1.set_title('raw profile')
+    axs1.plot(x_raw_list[next_index], y_raw_list[next_index])
+    axs1.vlines(x_min_limit_list[next_index], ymax=max(y_raw_list[next_index]), ymin=min(y_raw_list[next_index]),
+                linestyles='dashed')
+    axs1.vlines(x_max_limit_list[next_index], ymax=max(y_raw_list[next_index]), ymin=min(y_raw_list[next_index]),
+                linestyles='dashed')
+    canvas1.draw()  # Redraw canvas with new plot
+
+    # Plot scaled data on the second plot window
+    axs2.set_xlabel('x [mm]')
+    axs2.set_ylabel('y [mm]')
+    axs2.set_title('clean edge')
+    axs2.plot(x_shift_list[next_index], y_shift_list[next_index])
+    axs2.plot(x_lin_left_list[next_index], y_lin_left_list[next_index], 'k--', x_lin_right_list[next_index],
+              y_lin_right_list[next_index], 'k--')
+    axs2.plot(x_edge_list[next_index], y_edge_list[next_index], 'r')
+    axs2.plot(x_left_list[next_index], y_left_list[next_index], 'c')
+    axs2.plot(x_right_list[next_index], y_right_list[next_index], 'c')
+    axs2.plot(x_tip_list[next_index], y_tip_list[next_index], 'rx', markersize=10)
+    axs2.plot(x_relief_left_list[next_index], y_relief_left_list[next_index], 'bx', markersize=10)
+    axs2.plot(x_relief_right_list[next_index], y_relief_right_list[next_index], 'bx', markersize=10)
+    if np.isnan(result_radius[next_index]):
+        axs2.text(0.5, 0, f'no calculation: {err_msg_list[next_index]} ', ha='left', va='bottom', color='red')
+    else:
+        circle_finale = plt.Circle((center_list[next_index][0], center_list[next_index][1]),
+                                   result_radius[next_index], color='b', fill=False)
+        ellipsis_finale = PlotEllipsis(center_ell_list[next_index], radii_ell_list[next_index],
+                                       theta_ell_list[next_index])
+        axs2.plot(center_list[next_index][0], center_list[next_index][1], 'k+')
+        axs2.add_patch(circle_finale)
+        axs2.add_patch(ellipsis_finale)
+        # axs2.text(center[0], center[1], f'radius: {round(radius, 2)}', ha='right', va='top', color='red')
+        axs2.text(0, y_tip_list[next_index],
+                  'r\u03b2 = {:.0f} \u03bcm\nK = {:.3f}'.format(result_radius[next_index] * 1000,
+                                                                result_kappa[next_index]), ha='left', va='bottom',
+                  color='red')
+    canvas2.draw()  # Redraw canvas with new plot
+    root.update()
+
+def browse_down(current_text):
+    current_index = 0
+    for i in range(len(file_list)):
+        if current_text == os.path.basename(file_list[i]):
+            current_index = i
+            break
+    next_index = current_index - 1
+    if next_index < 0:
+        next_index = len(file_list)-1
+        browse_label.configure(text=os.path.basename(file_list[next_index]))
+    else:
+        browse_label.configure(text=os.path.basename(file_list[next_index]))
+
+    # Plotting
+    axs1.clear()  # see every plot seperatly
+    axs2.clear()
+    axs1.set_xlabel('x [mm]')
+    axs1.set_ylabel('y [mm]')
+    axs1.set_title('raw profile')
+    axs1.plot(x_raw_list[next_index], y_raw_list[next_index])
+    axs1.vlines(x_min_limit_list[next_index], ymax=max(y_raw_list[next_index]), ymin=min(y_raw_list[next_index]), linestyles='dashed')
+    axs1.vlines(x_max_limit_list[next_index], ymax=max(y_raw_list[next_index]), ymin=min(y_raw_list[next_index]), linestyles='dashed')
+    canvas1.draw()  # Redraw canvas with new plot
+
+    # Plot scaled data on the second plot window
+    axs2.set_xlabel('x [mm]')
+    axs2.set_ylabel('y [mm]')
+    axs2.set_title('clean edge')
+    axs2.plot(x_shift_list[next_index], y_shift_list[next_index])
+    axs2.plot(x_lin_left_list[next_index], y_lin_left_list[next_index], 'k--', x_lin_right_list[next_index], y_lin_right_list[next_index], 'k--')
+    axs2.plot(x_edge_list[next_index], y_edge_list[next_index], 'r')
+    axs2.plot(x_left_list[next_index], y_left_list[next_index], 'c')
+    axs2.plot(x_right_list[next_index], y_right_list[next_index], 'c')
+    axs2.plot(x_tip_list[next_index], y_tip_list[next_index], 'rx', markersize=10)
+    axs2.plot(x_relief_left_list[next_index], y_relief_left_list[next_index], 'bx', markersize=10)
+    axs2.plot(x_relief_right_list[next_index], y_relief_right_list[next_index], 'bx', markersize=10)
+    if np.isnan(result_radius[next_index]):
+        axs2.text(0.5, 0, f'no calculation: {err_msg_list[next_index]} ', ha='left', va='bottom', color='red')
+    else:
+        circle_finale = plt.Circle((center_list[next_index][0], center_list[next_index][1]), result_radius[next_index], color='b', fill=False)
+        ellipsis_finale = PlotEllipsis(center_ell_list[next_index], radii_ell_list[next_index], theta_ell_list[next_index])
+        axs2.plot(center_list[next_index][0], center_list[next_index][1], 'k+')
+        axs2.add_patch(circle_finale)
+        axs2.add_patch(ellipsis_finale)
+        # axs2.text(center[0], center[1], f'radius: {round(radius, 2)}', ha='right', va='top', color='red')
+        axs2.text(0, y_tip_list[next_index], 'r\u03b2 = {:.0f} \u03bcm\nK = {:.3f}'.format(result_radius[next_index] * 1000, result_kappa[next_index]), ha='left',va='bottom', color='red')
+    canvas2.draw()  # Redraw canvas with new plot
+    root.update()
+
+
+
+
+
 
 # GUI Setup
 root = tk.Tk()
@@ -534,7 +734,7 @@ frame_right.pack(side='left', fill='both', pady=5)
 fig2, axs2 = plt.subplots(figsize=(6, 4.5))
 axs2.set_xlabel('x [mm]')
 axs2.set_ylabel('y [mm]')
-axs2.set_title('cleaned profile')
+axs2.set_title('clean edge')
 canvas2 = FigureCanvasTkAgg(fig2, master=frame_right)
 canvas2.get_tk_widget().pack(side='top', padx=5, pady=0)
 axs2.axis('equal')
@@ -547,11 +747,24 @@ toolbar2.pack(side='top', padx=5, pady=0)
 frame_print = tk.Frame(frame_plot_all, bg=color)
 frame_print.pack(side='top', fill='x')
 print_label = tk.Label(frame_print, text='Info:', bg=color)
-print_label.pack(side='left', padx=5, pady=0)
+print_label.pack(side='left', padx=5, pady=8)
 
-frame_info = tk.Frame(frame_plot_all, bg='snow3')
-frame_info.pack(side='top', fill='x')
-info_label = ttk.Label(frame_info, text='Select file or folder to start...')
-info_label.pack(side='left', padx=5, pady=0)
+#frame_info = tk.Frame(frame_plot_all, bg='snow3')
+#frame_info.pack(side='top', fill='x')
+info_label = ttk.Label(frame_print, text='Select file or folder to start...')
+info_label.pack(side='left', padx=5, pady=8)
+
+### Browse Elements ###
+right_arrow_button = tk.Button(frame_print, text="-->", command=lambda: browse_up(browse_label.cget("text")))
+right_arrow_button.pack(side='right', padx=5)
+
+default_text = 'nothing to show :('
+browse_label = ttk.Label(frame_print, text=default_text)
+browse_label.pack(side='right',padx=5, pady=5)
+
+
+left_arrow_button = tk.Button(frame_print, text="<--", command=lambda: browse_down(browse_label.cget("text")))
+left_arrow_button.pack(side='right', padx=5)
+
 
 root.mainloop()
