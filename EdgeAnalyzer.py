@@ -10,8 +10,8 @@ from circle_fit import taubinSVD
 import os
 import datetime
 from sys import exit
-from skimage.measure import EllipseModel  # pip install scikit-image
-from matplotlib.patches import Ellipse
+# from skimage.measure import EllipseModel  # pip install scikit-image
+# from matplotlib.patches import Ellipse
 
 
 def prepare_data(path):
@@ -190,7 +190,7 @@ def fit_calculation(export):
                 if x_relief_left < x_tip and x_relief_right > x_tip:
                     # ratio of distances between transition and tip point less than factor X --> force symmetry
                     # Error catch was deleted, as uneven machining leads to uneven results --> allow high ratios
-                    if max((x_tip - x_relief_left), (x_relief_right - x_tip)) / min((x_tip - x_relief_left),(x_relief_right - x_tip)) < 20:
+                    if max((x_tip - x_relief_left), (x_relief_right - x_tip)) / min((x_tip - x_relief_left),(x_relief_right - x_tip)) < 100:
                         print('Transition points good')
                         radius, center = circle_fit(x_edge, y_edge)
                         center_ell, radii_ell, theta_ell = ellipsis_fit(x_edge, y_edge)
@@ -223,11 +223,12 @@ def fit_calculation(export):
                         else:
                             err_msg = 'Center point out of boundary'
                             print(err_msg)
-                            radius = np.nan
-                            center = np.nan
-                            center_ell = np.nan
-                            radii_ell = np.nan
-                            theta_ell = np.nan
+                            #print(x_relief_left, center[0], x_relief_right)
+                            # radius = np.nan
+                            # center = np.nan
+                            # center_ell = np.nan
+                            # radii_ell = np.nan
+                            # theta_ell = np.nan
                     else:
                         err_msg = 'Center point out of boundary'
                         print(err_msg)
@@ -317,10 +318,10 @@ def fit_calculation(export):
                 axs2.text(0.5, 0, f'no calculation: {err_msg} ', ha='left', va='bottom', color='red')
             else:
                 circle_finale = plt.Circle((center[0], center[1]), radius, color='b', fill=False)
-                ellipsis_finale = PlotEllipsis(center_ell, radii_ell, theta_ell)
+                #ellipsis_finale = PlotEllipsis(center_ell, radii_ell, theta_ell)
                 axs2.plot(center[0], center[1], 'k+')
                 axs2.add_patch(circle_finale)
-                axs2.add_patch(ellipsis_finale)
+                #axs2.add_patch(ellipsis_finale)
                 # axs2.text(center[0], center[1], f'radius: {round(radius, 2)}', ha='right', va='top', color='red')
                 axs2.text(0, y_tip, 'r\u03b2 = {:.0f} \u03bcm\nK = {:.3f}'.format(radius * 1000, Kappa), ha='left', va='bottom', color='red')
             canvas2.draw()  # Redraw canvas with new plot
@@ -341,7 +342,8 @@ def fit_calculation(export):
         info_label.configure(text="No file or folder selected")
 
 def PlotEllipsis(center, radii, theta):
-    return Ellipse(center, radii[0]*2, radii[1]*2, angle=theta, alpha=0.5)
+    return None
+    # return Ellipse(center, radii[0]*2, radii[1]*2, angle=theta, alpha=0.5)
 
 def circle_fit(x_edge, y_edge):
     xy_edge = np.stack((x_edge, y_edge), axis=1)
@@ -354,6 +356,7 @@ def ellipsis_fit(x_edge, y_edge):
     xy_edge = np.stack((x_edge, y_edge), axis=1)
     # list_of_pairs = [tuple(row) for row in xy_edge]
     # xc, yc, r, sigma = taubinSVD(list_of_pairs)
+    return np.nan, np.nan, np.nan
 
     ell = EllipseModel()
     ell.estimate(xy_edge)
@@ -431,14 +434,16 @@ def result_exporter(file_list, result_file, result_radius, result_radii_ell, res
     save_path = os.path.dirname(file_list[0])
     upper_folder = os.path.dirname(save_path)
     with open(os.path.join(upper_folder, 'Kantenmessung.txt'),'w') as file:
-        file.write("File\tDate-Time\tRadius [µm]\trA\trB\tK-Faktor\n")  # Writing the header
+        #file.write("File\tDate-Time\tRadius [µm]\trA\trB\tK-Faktor\n")  # Writing the header
+        file.write("File\tDate-Time\tRadius [µm]\tK-Faktor\n")  # Writing the header
 
         # Writing data from both lists into the file
         for file_name, radius, radii_ell, kappa in zip(result_file, result_radius, result_radii_ell, result_kappa):
             modification_time = datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(save_path, file_name)))
             if radius != 'nan':  # is valid edge rounding
-                file.write("{}\t{}\t{:.0f}\t{:.0f}\t{:.0f}\t{}\n".format(file_name,modification_time, \
-                    radius*1000, radii_ell[0]*1000, radii_ell[1]*1000, str(round(kappa, 3)).replace('.',',')))
+                # file.write("{}\t{}\t{:.0f}\t{:.0f}\t{:.0f}\t{}\n".format(file_name,modification_time, \
+                #     radius*1000, radii_ell[0]*1000, radii_ell[1]*1000, str(round(kappa, 3)).replace('.',',')))
+                file.write("{}\t{}\t{:.0f}\t{}\n".format(file_name,modification_time, radius*1000, str(round(kappa, 3)).replace('.',',')))
             else:  # could not measure edge rounding
                 file.write(f"{file_name}\t{modification_time}\t0\t1\n")  # assume sharp, symmetrical edge
     return upper_folder
@@ -580,11 +585,11 @@ def browse_up(current_text):
         else:
             circle_finale = plt.Circle((center_list[next_index][0], center_list[next_index][1]),
                                        result_radius[next_index], color='b', fill=False)
-            ellipsis_finale = PlotEllipsis(center_ell_list[next_index], radii_ell_list[next_index],
-                                           theta_ell_list[next_index])
+            # ellipsis_finale = PlotEllipsis(center_ell_list[next_index], radii_ell_list[next_index],
+            #                                theta_ell_list[next_index])
             axs2.plot(center_list[next_index][0], center_list[next_index][1], 'k+')
             axs2.add_patch(circle_finale)
-            axs2.add_patch(ellipsis_finale)
+            #axs2.add_patch(ellipsis_finale)
             # axs2.text(center[0], center[1], f'radius: {round(radius, 2)}', ha='right', va='top', color='red')
             axs2.text(0, y_tip_list[next_index],
                       'r\u03b2 = {:.0f} \u03bcm\nK = {:.3f}'.format(result_radius[next_index] * 1000,
@@ -636,10 +641,10 @@ def browse_down(current_text):
             axs2.text(0.5, 0, f'no calculation: {err_msg_list[next_index]} ', ha='left', va='bottom', color='red')
         else:
             circle_finale = plt.Circle((center_list[next_index][0], center_list[next_index][1]), result_radius[next_index], color='b', fill=False)
-            ellipsis_finale = PlotEllipsis(center_ell_list[next_index], radii_ell_list[next_index], theta_ell_list[next_index])
+            # ellipsis_finale = PlotEllipsis(center_ell_list[next_index], radii_ell_list[next_index], theta_ell_list[next_index])
             axs2.plot(center_list[next_index][0], center_list[next_index][1], 'k+')
             axs2.add_patch(circle_finale)
-            axs2.add_patch(ellipsis_finale)
+            # axs2.add_patch(ellipsis_finale)
             # axs2.text(center[0], center[1], f'radius: {round(radius, 2)}', ha='right', va='top', color='red')
             axs2.text(0, y_tip_list[next_index], 'r\u03b2 = {:.0f} \u03bcm\nK = {:.3f}'.format(result_radius[next_index] * 1000, result_kappa[next_index]), ha='left',va='bottom', color='red')
         canvas2.draw()  # Redraw canvas with new plot
