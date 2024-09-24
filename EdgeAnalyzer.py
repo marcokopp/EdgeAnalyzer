@@ -112,25 +112,8 @@ def clear_selection():
     global select_cut_cursor_2; select_cut_cursor_2 = None; del select_cut_cursor_2
     #global connection_ID_select_cut; connection_ID_select_cut = None; del connection_ID_select_cut
 
-    # Check if there is already a connection
-    try:
-        connection_ID_select_cut
-    except NameError:
-        pass
-        #print("no active connection to canvas1")
-    else:
-        #print("active connection to canvas1")
-        canvas1.mpl_disconnect(connection_ID_select_cut)
-        #print("connection disconnected")
-    try:
-        connection_ID_select_point
-    except NameError:
-        pass
-        #print("no active connection to canvas1")
-    else:
-        #print("active connection to canvas1")
-        canvas2.mpl_disconnect(connection_ID_select_point)
-        #print("connection disconnected")
+    # close interactive plots
+    close_event_handling()
 
     file_tree.delete(*file_tree.get_children())
     axs1.clear()
@@ -152,143 +135,185 @@ def kappa_factor(x_relief_left, y_relief_left, x_lin_right, y_lin_right, x_relie
     S_right = np.sqrt(pow(x_relief_right-x_lin_right[0], 2) + pow(y_relief_right-y_lin_right[0], 2))
     return S_left / S_right
 
+def close_event_handling():
+    # Check if there is already a connection
+    try:
+        connection_ID_canvas1
+    except NameError:
+        pass
+    else:
+        canvas1.mpl_disconnect(connection_ID_canvas1)
+
+    try:
+        connection_ID_canvas2
+    except NameError:
+        pass
+        # print("no active connection to canvas1")
+    else:
+        canvas2.mpl_disconnect(connection_ID_canvas2)
+
 def select_edge():
     global select_point_cursor_1; select_point_cursor_1 = None; del select_point_cursor_1
     global select_point_cursor_2; select_point_cursor_2 = None; del select_point_cursor_2
-    global connection_ID_select_point
+    global connection_ID_canvas2
+
     try:
         file_list
-    except NameError:
-        info_label.configure(text="No file selected")
-    else:
-        try:
-            select_cut_cursor_1
-        except NameError:
-            info_label.configure(text="Extract Profile first...")
+        if len(file_list) > 1:
+            info_label.configure(text="Select a single file")
+
         else:
-        # redraw canvas2
-            axs2.clear()
-            canvas2.draw()
-            file = file_list[0]
-            x_raw, y_raw = prepare_data(file)
-            indices = np.where((x_raw > min(select_cut_cursor_1, select_cut_cursor_2)) & (x_raw < max(select_cut_cursor_1, select_cut_cursor_2)))
-            axs2.set_xlabel('x [mm]')
-            axs2.set_ylabel('y [mm]')
-            axs2.set_title('clean edge')
-            axs2.plot(x_raw[indices], y_raw[indices])
-            canvas2.draw()
-
-            # Check if there is already a connection to canvas2
             try:
-                connection_ID_select_point
+                select_cut_cursor_1
             except NameError:
-                print("no active connection to canvas2")
+                info_label.configure(text="Extract Profile first...")
             else:
-                print("active connection to canvas2")
-                canvas2.mpl_disconnect(connection_ID_select_point)
-                print("connection disconnected")
+                # update info
+                info_label.configure(text="Select edge with left and right mouse (right plot), then Calculate...")
 
-            # Initialize cursor lines (placeholders) and positions
-            cursor_point_1 = axs2.axvline(0, color='red', linewidth=1, linestyle='--', visible=False)
-            cursor_point_2 = axs2.axvline(0, color='blue', linewidth=1, linestyle='--',visible=False)
-            select_point_cursor_1 = 0
-            select_point_cursor_2 = 0
-            cursor_point_1.set_visible(True)
-            cursor_point_2.set_visible(True)
-            canvas2.draw()
+                # close connection to canvas1
+                canvas1.mpl_disconnect(connection_ID_canvas1)
 
-            def on_click(event):
-                global select_point_cursor_1
-                global select_point_cursor_2
-                if event.inaxes != axs2:  # Only register clicks within the plot area
-                    return
+                file = file_list[0]
+                x_raw, y_raw = prepare_data(file)
+                indices = np.where((x_raw > min(select_cut_cursor_1, select_cut_cursor_2)) & (x_raw < max(select_cut_cursor_1, select_cut_cursor_2)))
 
-                if event.button == MouseButton.LEFT:
-                    cursor_point_1.set_xdata([event.xdata])  # Pass a list with one element
-                    cursor_point_1.set_visible(True)
-                    select_point_cursor_1 = [event.xdata]
-                if event.button == MouseButton.RIGHT:
-                    cursor_point_2.set_xdata([event.xdata])  # Pass a list with one element
-                    cursor_point_2.set_visible(True)
-                    select_point_cursor_2 = [event.xdata]
-                print('hallo2')
+                # Plotting
+                # redraw canvas2
+                axs1.clear()
+                canvas1.draw()
+                axs2.clear()
                 canvas2.draw()
 
-            # Connect the click and key press events
-            connection_ID_select_point = canvas2.mpl_connect('button_press_event', on_click)
+                axs1.set_xlabel('x [mm]')
+                axs1.set_ylabel('y [mm]')
+                axs1.set_title('raw profile')
+                axs1.plot(x_raw, y_raw)
+                axs1.vlines(min(select_cut_cursor_1, select_cut_cursor_2), ymax=max(y_raw), ymin=min(y_raw),linestyles='dashed')
+                axs1.vlines(max(select_cut_cursor_1, select_cut_cursor_2), ymax=max(y_raw), ymin=min(y_raw),linestyles='dashed')
+                canvas1.draw()
 
-            canvas2.draw()
+                axs2.set_xlabel('x [mm]')
+                axs2.set_ylabel('y [mm]')
+                axs2.set_title('clean edge')
+                axs2.plot(x_raw[indices], y_raw[indices])
+                canvas2.draw()
 
-def confirm_edge_selection():
-    try:
-        select_point_cursor_1
+                # Check if there is already a connection to canvas2
+                try:
+                    connection_ID_canvas2
+                except NameError:
+                    print("no active connection to canvas2")
+                else:
+                    print("active connection to canvas2")
+                    canvas2.mpl_disconnect(connection_ID_canvas2)
+                    print("connection disconnected")
+
+                # Initialize cursor lines (placeholders) and positions
+                x_sliced = x_raw[indices]
+                x_tip = x_sliced[np.argmax(y_raw[indices])]
+                cursor_point_1 = axs2.axvline(x_tip-0.2*max(x_raw[indices]), color='red', linewidth=1, linestyle='--', visible=False)
+                cursor_point_2 = axs2.axvline(x_tip+0.2*max(x_raw[indices]), color='blue', linewidth=1, linestyle='--',visible=False)
+                select_point_cursor_1 = x_tip-0.2*max(x_raw[indices])
+                select_point_cursor_2 = x_tip+0.2*max(x_raw[indices])
+                cursor_point_1.set_visible(True)
+                cursor_point_2.set_visible(True)
+                canvas2.draw()
+
+                def on_click(event):
+                    global select_point_cursor_1
+                    global select_point_cursor_2
+                    if event.inaxes != axs2:  # Only register clicks within the plot area
+                        return
+
+                    if event.button == MouseButton.LEFT:
+                        cursor_point_1.set_xdata([event.xdata])  # Pass a list with one element
+                        cursor_point_1.set_visible(True)
+                        select_point_cursor_1 = [event.xdata]
+                    if event.button == MouseButton.RIGHT:
+                        cursor_point_2.set_xdata([event.xdata])  # Pass a list with one element
+                        cursor_point_2.set_visible(True)
+                        select_point_cursor_2 = [event.xdata]
+                    print('hallo2')
+                    canvas2.draw()
+
+                # Connect the click and key press events
+                connection_ID_canvas2 = canvas2.mpl_connect('button_press_event', on_click)
+                canvas2.draw()
+
     except NameError:
-        info_label.configure(text="Select Edge first...")
-    else:
-        # Clear canvas2
-        axs2.clear()
-        canvas2.draw()
+        info_label.configure(text="No file selected")
 
-        # Disconnect Point Selection
-        canvas2.mpl_disconnect(connection_ID_select_point)
 
-        file = file_list[0]
-        x_raw, y_raw = prepare_data(file)
-        indices_extraction = np.where((x_raw > min(select_cut_cursor_1, select_cut_cursor_2)) & (x_raw < max(select_cut_cursor_1, select_cut_cursor_2)))
-        indices_edge = np.where((x_raw > min(select_point_cursor_1, select_point_cursor_2)) & (x_raw < max(select_point_cursor_1, select_point_cursor_2)))
+def calc_manual():
+    try:
+        file_list
+        if len(file_list) > 1:
+            info_label.configure(text="Select a single file")
 
-        radius, center = circle_fit(x_raw[indices_edge], y_raw[indices_edge])
-        Kappa = 999
-        #Kappa = kappa_factor(x_relief_left, y_relief_left, x_lin_right, y_lin_right, x_relief_right, y_relief_right)
+        else:
+            try:
+                select_point_cursor_1
+            except NameError:
+                info_label.configure(text="Select Edge first...")
+            else:
+                # Clear canvas2
+                axs2.clear()
+                canvas2.draw()
 
-        axs2.vlines(min(select_point_cursor_1, select_point_cursor_2), ymax=max(y_raw[indices_extraction]), ymin=min(y_raw[indices_extraction]), linestyles='dashed', colors='b')
-        axs2.vlines(max(select_point_cursor_1, select_point_cursor_2), ymax=max(y_raw[indices_extraction]), ymin=min(y_raw[indices_extraction]), linestyles='dashed', colors='b')
-        axs2.set_xlabel('x [mm]')
-        axs2.set_ylabel('y [mm]')
-        axs2.set_title('clean edge')
-        axs2.plot(x_raw[indices_extraction], y_raw[indices_extraction],'k')
+                # Disconnect Point Selection
+                canvas2.mpl_disconnect(connection_ID_canvas2)
 
-        circle_finale = plt.Circle((center[0], center[1]), radius, color='b', fill=False)
-        # ellipsis_finale = PlotEllipsis(center_ell, radii_ell, theta_ell)
-        axs2.plot(center[0], center[1], 'k+')
-        axs2.add_patch(circle_finale)
-        # axs2.add_patch(ellipsis_finale)
-        # axs2.text(center[0], center[1], f'radius: {round(radius, 2)}', ha='right', va='top', color='red')
-        axs2.text(0, max(y_raw[indices_edge]), 'r\u03b2 = {:.0f} \u03bcm\nK = {:.3f}'.format(radius * 1000, Kappa), ha='left', va='bottom',color='red')
+                file = file_list[0]
+                x_raw, y_raw = prepare_data(file)
+                indices_extraction = np.where((x_raw > min(select_cut_cursor_1, select_cut_cursor_2)) & (x_raw < max(select_cut_cursor_1, select_cut_cursor_2)))
+                indices_edge = np.where((x_raw > min(select_point_cursor_1, select_point_cursor_2)) & (x_raw < max(select_point_cursor_1, select_point_cursor_2)))
 
-        canvas2.draw()
+                radius, center = circle_fit(x_raw[indices_edge], y_raw[indices_edge])
+                Kappa = 999
+                #Kappa = kappa_factor(x_relief_left, y_relief_left, x_lin_right, y_lin_right, x_relief_right, y_relief_right)
 
-        # update Treeview
-        file_tree.delete(*file_tree.get_children())
-        file_tree.insert('', 'end', values=(os.path.basename(file), round(radius * 1000), round(Kappa, 2)))
+                axs2.vlines(min(select_point_cursor_1, select_point_cursor_2), ymax=max(y_raw[indices_extraction]), ymin=min(y_raw[indices_extraction]), linestyles='dashed', colors='b')
+                axs2.vlines(max(select_point_cursor_1, select_point_cursor_2), ymax=max(y_raw[indices_extraction]), ymin=min(y_raw[indices_extraction]), linestyles='dashed', colors='b')
+                axs2.set_xlabel('x [mm]')
+                axs2.set_ylabel('y [mm]')
+                axs2.set_title('clean edge')
+                axs2.plot(x_raw[indices_extraction], y_raw[indices_extraction],'k')
 
+                circle_finale = plt.Circle((center[0], center[1]), radius, color='b', fill=False)
+                # ellipsis_finale = PlotEllipsis(center_ell, radii_ell, theta_ell)
+                axs2.plot(center[0], center[1], 'k+')
+                axs2.add_patch(circle_finale)
+                # axs2.add_patch(ellipsis_finale)
+                # axs2.text(center[0], center[1], f'radius: {round(radius, 2)}', ha='right', va='top', color='red')
+                axs2.text(0, max(y_raw[indices_edge]), 'r\u03b2 = {:.0f} \u03bcm\nK = {:.3f}'.format(radius * 1000, Kappa), ha='left', va='bottom',color='red')
+                canvas2.draw()
+
+                # update info
+                try:
+                    radius
+                except NameError:
+                    info_label.configure(text="Calculation failed!")
+                else:
+                    info_label.configure(text="Calculation done!")
+
+                # update Treeview
+                file_tree.delete(*file_tree.get_children())
+                file_tree.insert('', 'end', values=(os.path.basename(file), round(radius * 1000), round(Kappa, 2)))
+
+    except NameError:
+        info_label.configure(text="No file selected")
 
 def extract_profile():
     global select_cut_cursor_1; select_cut_cursor_1 = None; del select_cut_cursor_1
     global select_cut_cursor_2; select_cut_cursor_2 = None; del select_cut_cursor_2
-    global connection_ID_select_cut
+    global connection_ID_canvas1
 
-    # Check if there is already a connection
-    try:
-        connection_ID_select_cut
-    except NameError:
-        pass
-        # print("no active connection to canvas1")
-    else:
-        # print("active connection to canvas1")
-        canvas1.mpl_disconnect(connection_ID_select_cut)
-        # print("connection disconnected")
-    try:
-        connection_ID_select_point
-    except NameError:
-        pass
-        # print("no active connection to canvas1")
-    else:
-        # print("active connection to canvas1")
-        canvas2.mpl_disconnect(connection_ID_select_point)
-        # print("connection disconnected")
+    # close interactive plots
+    close_event_handling()
 
     try:
+        file_list
         if len(file_list) > 1:
             info_label.configure(text="Select a single file")
         else:
@@ -297,12 +322,15 @@ def extract_profile():
             file_tree.delete(*file_tree.get_children())
             file_tree.insert('', 'end', values=(os.path.basename(file), 'k.A.', 'k.A.'))
             # update info-label
-            info_label.configure(text="Extract profile with left and right mouse, than confirm extraction")
+            info_label.configure(text="Extract profile with left and right mouse (left plot), then Select edge...")
             # update Browse-label
             browse_label.configure(text=os.path.basename(file))
+
             # see every plot seperatly
             axs1.clear()
             axs2.clear()
+            canvas1.draw()
+            canvas2.draw()
             axs2.set_xlabel('x [mm]')
             axs2.set_ylabel('y [mm]')
             axs2.set_title('clean edge')
@@ -344,70 +372,12 @@ def extract_profile():
                 canvas1.draw()
 
             # Connect the click and key press events
-            connection_ID_select_cut = canvas1.mpl_connect('button_press_event', on_click)
+            connection_ID_canvas1 = canvas1.mpl_connect('button_press_event', on_click)
 
             canvas1.draw()
 
     except NameError:
         info_label.configure(text="No file selected")
-
-def confirm_extraction():
-    # Check if event handle to canvas 2 is active
-    try:
-        connection_ID_select_point
-    except NameError:
-        pass
-    else:
-        canvas2.mpl_disconnect(connection_ID_select_point)
-
-    # Check if file
-    try:
-        file = file_list[0]
-        # Check if Selection
-        try:
-            select_cut_cursor_1
-        except NameError:
-            info_label.configure(text="Extract Profile first...")
-        else:
-            # disconnect event handler to canvas1
-            canvas1.mpl_disconnect(connection_ID_select_cut)
-            #print("Event handler disconnected.")
-
-            # Clear Treeview and Plot
-            file_tree.delete(*file_tree.get_children())
-            file_tree.insert('', 'end', values=(os.path.basename(file), 'k.A.', 'k.A.'))
-            # update info-label
-            info_label.configure(text="Profile extracted; Continue with Edge Selection ")
-            # update Browse-label
-            browse_label.configure(text=os.path.basename(file))
-            # see every plot seperatly
-            axs1.clear()
-            axs2.clear()
-            canvas1.draw()
-            canvas2.draw()
-
-            x_raw, y_raw = prepare_data(file)
-            indices = np.where((x_raw > min(select_cut_cursor_1,select_cut_cursor_2)) & (x_raw < max(select_cut_cursor_1,select_cut_cursor_2)))
-
-            # Plotting
-            # Plot scaled data on the first plot window
-            axs1.set_xlabel('x [mm]')
-            axs1.set_ylabel('y [mm]')
-            axs1.set_title('raw profile')
-            axs1.plot(x_raw, y_raw)
-            axs1.vlines(min(select_cut_cursor_1,select_cut_cursor_2), ymax=max(y_raw), ymin=min(y_raw), linestyles='dashed')
-            axs1.vlines(max(select_cut_cursor_1,select_cut_cursor_2), ymax=max(y_raw), ymin=min(y_raw), linestyles='dashed')
-            canvas1.draw()
-
-            axs2.set_xlabel('x [mm]')
-            axs2.set_ylabel('y [mm]')
-            axs2.set_title('clean edge')
-            axs2.plot(x_raw[indices], y_raw[indices])
-            canvas2.draw()
-
-    except NameError:
-        info_label.configure(text="No file selected")
-
 
 
 def fit_calculation(export):
@@ -416,24 +386,9 @@ def fit_calculation(export):
     global select_cut_cursor_2; select_cut_cursor_2 = None; del select_cut_cursor_2
     global select_point_cursor_1; select_point_cursor_1 = None; del select_point_cursor_1
     global select_point_cursor_2; select_point_cursor_2 = None; del select_point_cursor_2
-    try:
-        connection_ID_select_cut
-    except NameError:
-        pass
-        # print("no active connection to canvas1")
-    else:
-        # print("active connection to canvas1")
-        canvas1.mpl_disconnect(connection_ID_select_cut)
-        # print("connection disconnected")
-    try:
-        connection_ID_select_point
-    except NameError:
-        pass
-        # print("no active connection to canvas1")
-    else:
-        # print("active connection to canvas1")
-        canvas2.mpl_disconnect(connection_ID_select_point)
-        # print("connection disconnected")
+
+    # close interactive plots
+    close_event_handling()
 
     try:
         # Clear Treeview and Plot
@@ -965,13 +920,9 @@ def browse_down(current_text):
     except NameError:
         pass
 
-
-
-
-
-
 # GUI Setup
 root = tk.Tk()
+root.title("Edge_Lord v.2.1")
 root.geometry("1450x650")
 color = "snow3"
 root.configure(bg=color)
@@ -1051,16 +1002,12 @@ title_label_manual = tk.Label(calc_frame, text="Manual Processing", bg=color)
 title_label_manual.pack(side='top',anchor='w', padx=2, pady=2)
 select_cut_frame = tk.Frame(calc_frame, bg=color)
 select_cut_frame.pack(side='top', anchor='w', padx=0, pady=2)
-select_cut_value_manual = tk.Button(select_cut_frame, text="Extract Profile", command=extract_profile)
-select_cut_value_manual.pack(side='left', padx=2, pady=2)
-confirm_cut_value_manual = tk.Button(select_cut_frame, text="Confirm Extraction", command=confirm_extraction)
-confirm_cut_value_manual.pack(side='left', padx=2, pady=2)
-select_points_frame = tk.Frame(calc_frame, bg=color)
-select_points_frame.pack(side='top', anchor='w', padx=0, pady=2)
-select_point_manual = tk.Button(select_points_frame, text="Select Edge    ", command=select_edge)
-select_point_manual.pack(side='left', padx=2, pady=2)
-confirm_point_manual = tk.Button(select_points_frame, text="Confirm Selection  ", command=confirm_edge_selection)
-confirm_point_manual.pack(side='left', padx=2, pady=2)
+extract_profile_manual = tk.Button(select_cut_frame, text="Extract", command=extract_profile)
+extract_profile_manual.pack(side='left', padx=2, pady=2)
+select_edge_manual = tk.Button(select_cut_frame, text="Select", command=select_edge)
+select_edge_manual.pack(side='left', padx=2, pady=2)
+calculate_manual = tk.Button(select_cut_frame, text="Calculate", command=calc_manual)
+calculate_manual.pack(side='left', padx=2, pady=2)
 
 # Quit application
 quit_frame = tk.Frame(frame_control, bg = color)
