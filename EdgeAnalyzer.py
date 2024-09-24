@@ -809,114 +809,126 @@ def edge_detection(cut_value, no_flank, x_raw, y_raw):
 
 def browse_up(current_text):
     try:
-        current_index = 0
-        for i in range(len(file_list)):
-            if current_text == os.path.basename(file_list[i]):
-                current_index = i
-                break
-        next_index = current_index + 1
-        if next_index == len(file_list):
-            next_index = 0
-            browse_label.configure(text=os.path.basename(file_list[next_index]))
+        file_list
+        if len(file_list) == 1:
+            # a single file is selected --> no browsing
+            pass
         else:
-            browse_label.configure(text=os.path.basename(file_list[next_index]))
+            # multiple files are selected --> browsing active
+            current_index = 0
+            for i in range(len(file_list)):
+                if current_text == os.path.basename(file_list[i]):
+                    current_index = i
+                    break
+            next_index = current_index + 1
+            if next_index == len(file_list):
+                next_index = 0
+                browse_label.configure(text=os.path.basename(file_list[next_index]))
+            else:
+                browse_label.configure(text=os.path.basename(file_list[next_index]))
 
 
-        # Plotting
-        axs1.clear()  # see every plot seperatly
-        axs2.clear()
-        axs1.set_xlabel('x [mm]')
-        axs1.set_ylabel('y [mm]')
-        axs1.set_title('raw profile')
-        axs1.plot(x_raw_list[next_index], y_raw_list[next_index])
-        axs1.vlines(x_min_limit_list[next_index], ymax=max(y_raw_list[next_index]), ymin=min(y_raw_list[next_index]),
-                    linestyles='dashed')
-        axs1.vlines(x_max_limit_list[next_index], ymax=max(y_raw_list[next_index]), ymin=min(y_raw_list[next_index]),
-                    linestyles='dashed')
-        canvas1.draw()  # Redraw canvas with new plot
+            # Plotting
+            axs1.clear()  # see every plot seperatly
+            axs2.clear()
+            axs1.set_xlabel('x [mm]')
+            axs1.set_ylabel('y [mm]')
+            axs1.set_title('raw profile')
+            axs1.plot(x_raw_list[next_index], y_raw_list[next_index])
+            axs1.vlines(x_min_limit_list[next_index], ymax=max(y_raw_list[next_index]), ymin=min(y_raw_list[next_index]),
+                        linestyles='dashed')
+            axs1.vlines(x_max_limit_list[next_index], ymax=max(y_raw_list[next_index]), ymin=min(y_raw_list[next_index]),
+                        linestyles='dashed')
+            canvas1.draw()  # Redraw canvas with new plot
 
-        # Plot scaled data on the second plot window
-        axs2.set_xlabel('x [mm]')
-        axs2.set_ylabel('y [mm]')
-        axs2.set_title('clean edge')
-        axs2.plot(x_shift_list[next_index], y_shift_list[next_index])
-        axs2.plot(x_lin_left_list[next_index], y_lin_left_list[next_index], 'k--', x_lin_right_list[next_index],
-                  y_lin_right_list[next_index], 'k--')
-        axs2.plot(x_edge_list[next_index], y_edge_list[next_index], 'r')
-        axs2.plot(x_left_list[next_index], y_left_list[next_index], 'c')
-        axs2.plot(x_right_list[next_index], y_right_list[next_index], 'c')
-        axs2.plot(x_tip_list[next_index], y_tip_list[next_index], 'rx', markersize=10)
-        axs2.plot(x_relief_left_list[next_index], y_relief_left_list[next_index], 'bx', markersize=10)
-        axs2.plot(x_relief_right_list[next_index], y_relief_right_list[next_index], 'bx', markersize=10)
-        if result_radius[next_index] == 'nan':
-            axs2.text(0.5, 0, f'no calculation: {err_msg_list[next_index]} ', ha='left', va='bottom', color='red')
-        else:
-            circle_finale = plt.Circle((center_list[next_index][0], center_list[next_index][1]),
-                                       result_radius[next_index], color='b', fill=False)
-            # ellipsis_finale = PlotEllipsis(center_ell_list[next_index], radii_ell_list[next_index],
-            #                                theta_ell_list[next_index])
-            axs2.plot(center_list[next_index][0], center_list[next_index][1], 'k+')
-            axs2.add_patch(circle_finale)
-            #axs2.add_patch(ellipsis_finale)
-            # axs2.text(center[0], center[1], f'radius: {round(radius, 2)}', ha='right', va='top', color='red')
-            axs2.text(0, y_tip_list[next_index],
-                      'r\u03b2 = {:.0f} \u03bcm\nK = {:.3f}'.format(result_radius[next_index] * 1000,
-                                                                    result_kappa[next_index]), ha='left', va='bottom',
-                      color='red')
-        canvas2.draw()  # Redraw canvas with new plot
-        root.update()
+            # Plot scaled data on the second plot window
+            axs2.set_xlabel('x [mm]')
+            axs2.set_ylabel('y [mm]')
+            axs2.set_title('clean edge')
+            axs2.plot(x_shift_list[next_index], y_shift_list[next_index])
+            axs2.plot(x_lin_left_list[next_index], y_lin_left_list[next_index], 'k--', x_lin_right_list[next_index],
+                      y_lin_right_list[next_index], 'k--')
+            axs2.plot(x_edge_list[next_index], y_edge_list[next_index], 'r')
+            axs2.plot(x_left_list[next_index], y_left_list[next_index], 'c')
+            axs2.plot(x_right_list[next_index], y_right_list[next_index], 'c')
+            axs2.plot(x_tip_list[next_index], y_tip_list[next_index], 'rx', markersize=10)
+            axs2.plot(x_relief_left_list[next_index], y_relief_left_list[next_index], 'bx', markersize=10)
+            axs2.plot(x_relief_right_list[next_index], y_relief_right_list[next_index], 'bx', markersize=10)
+            if result_radius[next_index] == 'nan':
+                axs2.text(0.5, 0, f'no calculation: {err_msg_list[next_index]} ', ha='left', va='bottom', color='red')
+            else:
+                circle_finale = plt.Circle((center_list[next_index][0], center_list[next_index][1]),
+                                           result_radius[next_index], color='b', fill=False)
+                # ellipsis_finale = PlotEllipsis(center_ell_list[next_index], radii_ell_list[next_index],
+                #                                theta_ell_list[next_index])
+                axs2.plot(center_list[next_index][0], center_list[next_index][1], 'k+')
+                axs2.add_patch(circle_finale)
+                #axs2.add_patch(ellipsis_finale)
+                # axs2.text(center[0], center[1], f'radius: {round(radius, 2)}', ha='right', va='top', color='red')
+                axs2.text(0, y_tip_list[next_index],
+                          'r\u03b2 = {:.0f} \u03bcm\nK = {:.3f}'.format(result_radius[next_index] * 1000,
+                                                                        result_kappa[next_index]), ha='left', va='bottom',
+                          color='red')
+            canvas2.draw()  # Redraw canvas with new plot
+            root.update()
     except NameError:
         pass
 
 def browse_down(current_text):
     try:
-        current_index = 0
-        for i in range(len(file_list)):
-            if current_text == os.path.basename(file_list[i]):
-                current_index = i
-                break
-        next_index = current_index - 1
-        if next_index < 0:
-            next_index = len(file_list)-1
-            browse_label.configure(text=os.path.basename(file_list[next_index]))
+        file_list
+        if len(file_list) == 1:
+            # a single file is selected --> no browsing
+            pass
         else:
-            browse_label.configure(text=os.path.basename(file_list[next_index]))
+            # multiple files are selected --> browsing active
+            current_index = 0
+            for i in range(len(file_list)):
+                if current_text == os.path.basename(file_list[i]):
+                    current_index = i
+                    break
+            next_index = current_index - 1
+            if next_index < 0:
+                next_index = len(file_list)-1
+                browse_label.configure(text=os.path.basename(file_list[next_index]))
+            else:
+                browse_label.configure(text=os.path.basename(file_list[next_index]))
 
-        # Plotting
-        axs1.clear()  # see every plot seperatly
-        axs2.clear()
-        axs1.set_xlabel('x [mm]')
-        axs1.set_ylabel('y [mm]')
-        axs1.set_title('raw profile')
-        axs1.plot(x_raw_list[next_index], y_raw_list[next_index])
-        axs1.vlines(x_min_limit_list[next_index], ymax=max(y_raw_list[next_index]), ymin=min(y_raw_list[next_index]), linestyles='dashed')
-        axs1.vlines(x_max_limit_list[next_index], ymax=max(y_raw_list[next_index]), ymin=min(y_raw_list[next_index]), linestyles='dashed')
-        canvas1.draw()  # Redraw canvas with new plot
+            # Plotting
+            axs1.clear()  # see every plot seperatly
+            axs2.clear()
+            axs1.set_xlabel('x [mm]')
+            axs1.set_ylabel('y [mm]')
+            axs1.set_title('raw profile')
+            axs1.plot(x_raw_list[next_index], y_raw_list[next_index])
+            axs1.vlines(x_min_limit_list[next_index], ymax=max(y_raw_list[next_index]), ymin=min(y_raw_list[next_index]), linestyles='dashed')
+            axs1.vlines(x_max_limit_list[next_index], ymax=max(y_raw_list[next_index]), ymin=min(y_raw_list[next_index]), linestyles='dashed')
+            canvas1.draw()  # Redraw canvas with new plot
 
-        # Plot scaled data on the second plot window
-        axs2.set_xlabel('x [mm]')
-        axs2.set_ylabel('y [mm]')
-        axs2.set_title('clean edge')
-        axs2.plot(x_shift_list[next_index], y_shift_list[next_index])
-        axs2.plot(x_lin_left_list[next_index], y_lin_left_list[next_index], 'k--', x_lin_right_list[next_index], y_lin_right_list[next_index], 'k--')
-        axs2.plot(x_edge_list[next_index], y_edge_list[next_index], 'r')
-        axs2.plot(x_left_list[next_index], y_left_list[next_index], 'c')
-        axs2.plot(x_right_list[next_index], y_right_list[next_index], 'c')
-        axs2.plot(x_tip_list[next_index], y_tip_list[next_index], 'rx', markersize=10)
-        axs2.plot(x_relief_left_list[next_index], y_relief_left_list[next_index], 'bx', markersize=10)
-        axs2.plot(x_relief_right_list[next_index], y_relief_right_list[next_index], 'bx', markersize=10)
-        if result_radius[next_index] == 'nan':
-            axs2.text(0.5, 0, f'no calculation: {err_msg_list[next_index]} ', ha='left', va='bottom', color='red')
-        else:
-            circle_finale = plt.Circle((center_list[next_index][0], center_list[next_index][1]), result_radius[next_index], color='b', fill=False)
-            # ellipsis_finale = PlotEllipsis(center_ell_list[next_index], radii_ell_list[next_index], theta_ell_list[next_index])
-            axs2.plot(center_list[next_index][0], center_list[next_index][1], 'k+')
-            axs2.add_patch(circle_finale)
-            # axs2.add_patch(ellipsis_finale)
-            # axs2.text(center[0], center[1], f'radius: {round(radius, 2)}', ha='right', va='top', color='red')
-            axs2.text(0, y_tip_list[next_index], 'r\u03b2 = {:.0f} \u03bcm\nK = {:.3f}'.format(result_radius[next_index] * 1000, result_kappa[next_index]), ha='left',va='bottom', color='red')
-        canvas2.draw()  # Redraw canvas with new plot
-        root.update()
+            # Plot scaled data on the second plot window
+            axs2.set_xlabel('x [mm]')
+            axs2.set_ylabel('y [mm]')
+            axs2.set_title('clean edge')
+            axs2.plot(x_shift_list[next_index], y_shift_list[next_index])
+            axs2.plot(x_lin_left_list[next_index], y_lin_left_list[next_index], 'k--', x_lin_right_list[next_index], y_lin_right_list[next_index], 'k--')
+            axs2.plot(x_edge_list[next_index], y_edge_list[next_index], 'r')
+            axs2.plot(x_left_list[next_index], y_left_list[next_index], 'c')
+            axs2.plot(x_right_list[next_index], y_right_list[next_index], 'c')
+            axs2.plot(x_tip_list[next_index], y_tip_list[next_index], 'rx', markersize=10)
+            axs2.plot(x_relief_left_list[next_index], y_relief_left_list[next_index], 'bx', markersize=10)
+            axs2.plot(x_relief_right_list[next_index], y_relief_right_list[next_index], 'bx', markersize=10)
+            if result_radius[next_index] == 'nan':
+                axs2.text(0.5, 0, f'no calculation: {err_msg_list[next_index]} ', ha='left', va='bottom', color='red')
+            else:
+                circle_finale = plt.Circle((center_list[next_index][0], center_list[next_index][1]), result_radius[next_index], color='b', fill=False)
+                # ellipsis_finale = PlotEllipsis(center_ell_list[next_index], radii_ell_list[next_index], theta_ell_list[next_index])
+                axs2.plot(center_list[next_index][0], center_list[next_index][1], 'k+')
+                axs2.add_patch(circle_finale)
+                # axs2.add_patch(ellipsis_finale)
+                # axs2.text(center[0], center[1], f'radius: {round(radius, 2)}', ha='right', va='top', color='red')
+                axs2.text(0, y_tip_list[next_index], 'r\u03b2 = {:.0f} \u03bcm\nK = {:.3f}'.format(result_radius[next_index] * 1000, result_kappa[next_index]), ha='left',va='bottom', color='red')
+            canvas2.draw()  # Redraw canvas with new plot
+            root.update()
     except NameError:
         pass
 
